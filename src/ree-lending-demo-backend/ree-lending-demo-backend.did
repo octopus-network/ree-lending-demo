@@ -1,3 +1,32 @@
+type BorrowOffer = record { output : CoinBalance; nonce : nat64; input : Utxo };
+type CoinBalance = record { id : text; value : nat };
+type DepositOffer = record {
+  output : CoinBalance;
+  nonce : nat64;
+  input : opt Utxo;
+};
+type ExchangeError = variant {
+  InvalidSignPsbtArgs : text;
+  Overflow;
+  PoolAddressNotFound;
+  PoolStateExpired : nat64;
+  TooSmallFunds;
+  InvalidPool;
+  InvalidPsbt : text;
+  InvalidTxid;
+  EmptyPool;
+  ChainKeyError;
+  InvalidState : text;
+};
+type Result = variant { Ok : BorrowOffer; Err : ExchangeError };
+type Result_1 = variant { Ok : DepositOffer; Err : ExchangeError };
+type Utxo = record {
+  maybe_rune : opt CoinBalance;
+  sats : nat64;
+  txid : text;
+  vout : nat32;
+};
 service : {
-    "greet": (text) -> (text) query;
+  pre_borrow : (text, CoinBalance) -> (Result) query;
+  pre_deposit : (text, CoinBalance) -> (Result_1) query;
 }
