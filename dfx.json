@@ -1,0 +1,27 @@
+{
+  "canisters": {
+    "ree-lending-demo-backend": {
+      "candid": "src/ree-lending-demo-backend/ree-lending-demo-backend.did",
+      "package": "ree-lending-demo-backend",
+      "type": "rust"
+    },
+    "ree-lending-demo-frontend": {
+      "dependencies": [
+        "ree-lending-demo-backend"
+      ],
+      "source": [
+        "src/ree-lending-demo-frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "ree-lending-demo-frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
