@@ -152,9 +152,13 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
                 )
                 .map_err(|e| e.to_string())?;
             if let Some(ref utxo) = consumed {
-                crate::psbt::sign(&mut psbt, utxo, pool.base_id().to_bytes())
-                    .await
-                    .map_err(|e| e.to_string())?;
+                crate::psbt::sign(
+                    &mut psbt,
+                    utxo,
+                    pool.base_id().to_string().as_bytes().to_vec(),
+                )
+                .await
+                .map_err(|e| e.to_string())?;
             }
             crate::with_pool_mut(&pool.pubkey, |p| {
                 let mut pool = p.expect("already checked in pre_deposit; qed");
@@ -174,9 +178,13 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
                     output_coins,
                 )
                 .map_err(|e| e.to_string())?;
-            crate::psbt::sign(&mut psbt, &consumed, pool.base_id().to_bytes())
-                .await
-                .map_err(|e| e.to_string())?;
+            crate::psbt::sign(
+                &mut psbt,
+                &consumed,
+                pool.base_id().to_string().as_bytes().to_vec(),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
             crate::with_pool_mut(&pool.pubkey, |p| {
                 let mut pool = p.expect("already checked in pre_borrow; qed");
                 pool.commit(new_state);

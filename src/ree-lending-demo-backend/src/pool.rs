@@ -168,10 +168,10 @@ impl Pool {
 
     pub(crate) fn available_to_borrow(
         &self,
-        runes: CoinBalance,
-    ) -> Result<CoinBalance, ExchangeError> {
+        output_btc: CoinBalance,
+    ) -> Result<(CoinBalance, CoinBalance), ExchangeError> {
         let btc_meta = CoinMeta::btc();
-        (runes.id == self.meta.id)
+        (output_btc.id == btc_meta.id)
             .then(|| ())
             .ok_or(ExchangeError::InvalidPool)?;
         let recent_state = self.states.last().ok_or(ExchangeError::EmptyPool)?;
@@ -180,7 +180,7 @@ impl Pool {
             .then(|| ())
             .ok_or(ExchangeError::EmptyPool)?;
 
-        let expected_btc = runes.value as u64;
+        let expected_btc = output_btc.value as u64;
         let min_hold = CoinMeta::btc().min_amount as u64;
         let max_borrow = btc_supply
             .checked_sub(min_hold)
@@ -191,10 +191,16 @@ impl Pool {
             expected_btc
         };
 
-        Ok(CoinBalance {
-            id: btc_meta.id,
-            value: offer as u128,
-        })
+        Ok((
+            CoinBalance {
+                id: self.base_id(),
+                value: offer as u128,
+            },
+            CoinBalance {
+                id: btc_meta.id,
+                value: offer as u128,
+            },
+        ))
     }
 
     pub(crate) fn validate_borrow(
@@ -234,24 +240,26 @@ impl Pool {
             ExchangeError::InvalidSignPsbtArgs("pool_utxo_spend/pool state mismatch".to_string()),
         )?;
         // check minimal sats
-        let offer = self.available_to_borrow(input.coin)?;
-        let output_btc: u64 = offer
-            .value
-            .try_into()
-            .map_err(|_| ExchangeError::Overflow)?;
+        let (runes, btc) = self.available_to_borrow(output.coin)?;
+        let output_btc: u64 = btc.value.try_into().map_err(|_| ExchangeError::Overflow)?;
         (output_btc >= MIN_BTC_VALUE)
             .then(|| ())
             .ok_or(ExchangeError::TooSmallFunds)?;
         let (btc_output, rune_output) = (
             prev_utxo.sats.checked_sub(output_btc),
-            prev_utxo.rune_amount().checked_add(input.coin.value),
+            prev_utxo.rune_amount().checked_add(runes.value),
         );
 
         // check params
-        (output.coin == offer)
+        (output.coin == btc)
             .then(|| ())
             .ok_or(ExchangeError::InvalidSignPsbtArgs(
-                "inputs mismatch with pre_swap".to_string(),
+                "output mismatch with pre_swap".to_string(),
+            ))?;
+        (input.coin == runes)
+            .then(|| ())
+            .ok_or(ExchangeError::InvalidSignPsbtArgs(
+                "input mismatch with pre_borrow".to_string(),
             ))?;
         let (btc_output, rune_output) = (
             btc_output.ok_or(ExchangeError::Overflow)?,
