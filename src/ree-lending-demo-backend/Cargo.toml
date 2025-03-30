@@ -17,6 +17,5 @@ serde = { version = "1.0", features = ["derive"] }
 hex = "0.4"
 ic-stable-structures = "0.6"
 ciborium = "0.2"
-ree-types = "0.3"
-chain-key = { path = "./crates/chain-key" }
+ree-types = { git =  "https://github.com/octopus-network/ree-types.git", branch = "julian-add-common-funcs" }
 serde_json = "1.0"

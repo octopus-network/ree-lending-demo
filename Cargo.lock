@@ -192,17 +192,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chain-key"
-version = "0.0.1"
-dependencies = [
- "bitcoin",
- "candid",
- "ic-cdk",
- "serde",
- "serde_bytes",
-]
-
-[[package]]
 name = "ciborium"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -489,7 +478,6 @@ name = "ree-lending-demo-backend"
 version = "0.1.0"
 dependencies = [
  "candid",
- "chain-key",
  "ciborium",
  "hex",
  "ic-cdk",
@@ -504,18 +492,17 @@ dependencies = [
 [[package]]
 name = "ree-types"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cae87b56c5968a8e7e23cf09c603c5e8a5025da52d30ca90d85260c37b0d6b18"
+source = "git+https://github.com/octopus-network/ree-types.git?branch=julian-add-common-funcs#57889d0a78607ca6d10403b22dfab7a52fc2e09f"
 dependencies = [
  "anyhow",
  "bitcoin",
  "candid",
- "ciborium",
  "generic-array",
  "hex",
  "ic-cdk",
  "ic-stable-structures",
  "serde",
+ "serde_bytes",
  "thiserror",
 ]
 

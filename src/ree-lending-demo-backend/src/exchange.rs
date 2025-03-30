@@ -152,7 +152,7 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
                 )
                 .map_err(|e| e.to_string())?;
             if let Some(ref utxo) = consumed {
-                crate::psbt::sign(
+                ree_types::psbt::sign(
                     &mut psbt,
                     utxo,
                     pool.base_id().to_string().as_bytes().to_vec(),
@@ -178,7 +178,7 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
                     output_coins,
                 )
                 .map_err(|e| e.to_string())?;
-            crate::psbt::sign(
+            ree_types::psbt::sign(
                 &mut psbt,
                 &consumed,
                 pool.base_id().to_string().as_bytes().to_vec(),
