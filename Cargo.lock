@@ -491,8 +491,8 @@ dependencies = [
 
 [[package]]
 name = "ree-types"
-version = "0.3.0"
-source = "git+https://github.com/octopus-network/ree-types.git?branch=julian-add-common-funcs#57889d0a78607ca6d10403b22dfab7a52fc2e09f"
+version = "0.3.1"
+source = "git+https://github.com/octopus-network/ree-types.git?branch=julian-add-common-funcs#535f262224d64b6584a94a052310cc1f997eddd0"
 dependencies = [
  "anyhow",
  "bitcoin",
