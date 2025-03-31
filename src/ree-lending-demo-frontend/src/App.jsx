@@ -22,16 +22,6 @@ function App() {
       });
   }, []);
 
-  // const [greeting, setGreeting] = useState("");
-
-  // function handleSubmit(event) {
-  //   event.preventDefault();
-  //   const name = event.target.elements.name.value;
-  //   ree_lending_demo_backend.greet(name).then((greeting) => {
-  //     setGreeting(greeting);
-  //   });
-  //   return false;
-  // }
   return (
     <LaserEyesProvider
       config={{
@@ -49,8 +39,8 @@ function App() {
             <>
               <div className="text-xl font-semibold">Pools</div>
               <div className="mt-4">
-                <div className="grid grid-cols-10 text-xs text-muted-foreground px-4 mb-2">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-11 text-xs text-muted-foreground px-4 mb-2">
+                  <div className="col-span-4">
                     <span>Pool</span>
                   </div>
                   <div className="col-span-3">
