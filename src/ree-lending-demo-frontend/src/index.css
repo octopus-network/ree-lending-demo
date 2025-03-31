@@ -17,10 +17,10 @@ body {
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(1 0 0);
   --primary-foreground: oklch(0.23 0.0401 291.73);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.3 0.0146 256.79);
+  --secondary-foreground: oklch(0.97 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(0.58 0.0221 260.15);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
