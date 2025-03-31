@@ -1,6 +1,12 @@
 import { UNISAT, MAGIC_EDEN, XVERSE } from "@omnisat/lasereyes";
 import { Coin } from "./types";
 
+export const UNISAT_API_URL = "https://wallet-api-testnet4.unisat.io";
+
+export const UTXO_DUST = BigInt(546);
+
+export const EXCHANGE_ID = "rwkfp-zyaaa-aaaao-qj7nq-cai";
+
 export const WALLETS: Record<
   string,
   {
