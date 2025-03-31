@@ -1,12 +1,11 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { COIN_LIST, BITCOIN, UTXO_DUST, EXCHANGE_ID } from "@/lib/constants";
 import { useEffect, useMemo, useState } from "react";
 import * as bitcoin from "bitcoinjs-lib";
 import { useLaserEyes } from "@omnisat/lasereyes";
 import { RuneId, Runestone, none, Edict } from "runelib";
 
+import { useAddSpentUtxos } from "@/hooks/useSpentUtxos";
 import { Orchestrator } from "@/lib/orchestrator";
 import {
   formatCoinAmount,
@@ -21,10 +20,10 @@ import {
 } from "@/lib/utils";
 
 import { Input } from "@/components/ui/input";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Pool,
-  DepositQuote,
+  DepositOffer,
   UnspentOutput,
   AddressType,
   ToSignInput,
@@ -35,21 +34,20 @@ import {
 import { toast } from "sonner";
 import { ree_lending_demo_backend } from "declarations/ree-lending-demo-backend";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useBtcUtxos, useRuneUtxos } from "@/hooks/useUtxos";
+import { useBtcUtxos } from "@/hooks/useUtxos";
 import { Loader2 } from "lucide-react";
+import { useCoinBalance } from "@/hooks/useBalance";
 
-export function ManagePoolModal({
-  open,
-  setOpen,
+export function DepositContent({
   pool,
+  onSuccess,
 }: {
-  open: boolean;
   pool: Pool;
-  setOpen: (open: boolean) => void;
+  onSuccess: (txid: string) => void;
 }) {
-  const [tab, setTab] = useState("deposit");
   const [isQuoting, setIsQuoting] = useState(false);
   const [isSubmiting, setIsSubmiting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const { paymentAddress, address, signPsbt } = useLaserEyes();
   const [coin, coinReserved, btcReserved] = useMemo(() => {
@@ -58,15 +56,14 @@ export function ManagePoolModal({
   }, [pool]);
 
   const [inputAmount, setInputAmount] = useState("");
-  const [depositQuote, setDepositQuote] = useState<DepositQuote>();
-
-  const [borrowQuote, setBorrowQuote] = useState<any>();
+  const [depositOffer, setDepositOffer] = useState<DepositOffer>();
+  const [toSpendUtxos, setToSpendUtxos] = useState<UnspentOutput[]>([]);
 
   const btcUtxos = useBtcUtxos();
+  const btcBalance = useCoinBalance(BITCOIN);
 
-  console.log("btcUtxos", btcUtxos);
+  const addSpentUtxos = useAddSpentUtxos();
 
-  const runeUtxos = useRuneUtxos(coin?.id);
   const debouncedInputAmount = useDebounce(inputAmount, 300);
 
   const [poolSpendOutpoints, setPoolSpendOutpoints] = useState<string[]>([]);
@@ -87,44 +84,34 @@ export function ManagePoolModal({
   );
 
   useEffect(() => {
-    setInputAmount("");
-    setDepositQuote(undefined);
-    setBorrowQuote(undefined);
-    setIsQuoting(false);
-    setIsSubmiting(false);
-    setPsbt(undefined);
-  }, [tab, open]);
-
-  useEffect(() => {
     if (!Number(debouncedInputAmount)) {
       return;
     }
-    if (tab === "deposit") {
-      const btcAmount = parseCoinAmount(debouncedInputAmount, BITCOIN);
-      setIsQuoting(true);
-      ree_lending_demo_backend
-        .pre_deposit(pool.address, {
-          id: BITCOIN.id,
-          value: BigInt(btcAmount),
-        })
-        .then((res: { Ok: DepositQuote }) => {
-          if (res.Ok) {
-            setDepositQuote(res.Ok);
-          }
-        })
-        .finally(() => {
-          setIsQuoting(false);
-        });
-    }
-  }, [tab, debouncedInputAmount, coin]);
+
+    const btcAmount = parseCoinAmount(debouncedInputAmount, BITCOIN);
+    setIsQuoting(true);
+    ree_lending_demo_backend
+      .pre_deposit(pool.address, {
+        id: BITCOIN.id,
+        value: BigInt(btcAmount),
+      })
+      .then((res: { Ok: DepositOffer }) => {
+        if (res.Ok) {
+          setDepositOffer(res.Ok);
+        }
+      })
+      .finally(() => {
+        setIsQuoting(false);
+      });
+  }, [debouncedInputAmount, coin]);
 
   useEffect(() => {
-    if (!depositQuote || !btcUtxos?.length || !coin) {
+    if (!depositOffer || !btcUtxos?.length || !coin) {
       return;
     }
 
     const genPsbt = async () => {
-      console.log("genPsbt");
+      setIsGenerating(true);
       const depositBtcAmount = BigInt(
         parseCoinAmount(debouncedInputAmount, BITCOIN)
       );
@@ -133,7 +120,7 @@ export function ManagePoolModal({
 
       const { output } = getP2trAressAndScript(pool.key);
 
-      const poolUtxo0 = depositQuote.pool_utxo[0];
+      const poolUtxo0 = depositOffer.pool_utxo[0];
       const poolUtxo: UnspentOutput = {
         txid: poolUtxo0.txid,
         vout: poolUtxo0.vout,
@@ -248,10 +235,6 @@ export function ManagePoolModal({
         }
       } while (currentFee > lastFee && targetBtcAmount > 0);
 
-      console.log("fee", currentFee);
-      console.log("inputTypes", inputTypes);
-      console.log("outputTypes", outputTypes);
-
       let totalBtcAmount = BigInt(0);
 
       selectedUtxos.forEach((utxo) => {
@@ -281,7 +264,7 @@ export function ManagePoolModal({
 
       const toSignInputs: ToSignInput[] = [];
 
-      const toSpendUtxos = txInputs
+      const _toSpendUtxos = txInputs
         .filter(({ utxo }, index) => {
           const isUserInput =
             utxo.address === address || utxo.address === paymentAddress;
@@ -298,6 +281,7 @@ export function ManagePoolModal({
         })
         .map((input) => input.utxo);
 
+      setToSpendUtxos(_toSpendUtxos);
       const unsignedTxClone = unsignedTx.clone();
 
       for (let i = 0; i < toSignInputs.length; i++) {
@@ -333,13 +317,14 @@ export function ManagePoolModal({
       ]);
 
       setPsbt(_psbt);
+      setIsGenerating(false);
     };
 
     genPsbt();
-  }, [depositQuote, coin, debouncedInputAmount, pool, paymentAddress, address]);
+  }, [depositOffer, coin, debouncedInputAmount, pool, paymentAddress, address]);
 
   const onSubmit = async () => {
-    if (!psbt || !depositQuote) {
+    if (!psbt || !depositOffer) {
       return;
     }
     setIsSubmiting(true);
@@ -352,7 +337,7 @@ export function ManagePoolModal({
         throw new Error("Signed Failed");
       }
 
-      await Orchestrator.invoke({
+      const txid = await Orchestrator.invoke({
         intention_set: {
           initiator_address: paymentAddress,
           intentions: [
@@ -365,12 +350,16 @@ export function ManagePoolModal({
               output_coins: [],
               pool_address: pool.address,
               action_params: "",
-              nonce: depositQuote.nonce,
+              nonce: depositOffer.nonce,
             },
           ],
         },
         psbt_hex: signedPsbtHex,
       });
+
+      addSpentUtxos(toSpendUtxos);
+
+      onSuccess(txid);
     } catch (error: any) {
       if (error.code !== 4001) {
         console.log(error);
@@ -382,110 +371,53 @@ export function ManagePoolModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent hideCloseButton className="p-4">
-        <div>
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="w-full bg-secondary/50 rounded-md">
-              <TabsTrigger
-                value="deposit"
-                className="font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground"
-              >
-                Deposit
-              </TabsTrigger>
-              <TabsTrigger
-                value="borrow"
-                className="font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground"
-              >
-                Borrow
-              </TabsTrigger>
-            </TabsList>
-            <div className="mt-2">
-              <TabsContent value="deposit">
-                <div
-                  className={cn(
-                    "gap-2 focus-within:border-primary border flex rounded-md items-center px-3 py-2",
-                    isQuoting && "animate-pulse"
-                  )}
-                >
-                  <Button variant="outline">Max</Button>
-                  <Input
-                    placeholder="0.00"
-                    type="number"
-                    value={inputAmount}
-                    onChange={(e) => setInputAmount(e.target.value)}
-                    className="text-right font-semibold text-xl! flex-1 border-none p-0 focus-visible:outline-none focus-visible:ring-0"
-                  />
-                  <span className="text-lg">BTC</span>
-                </div>
-                <div className="flex justify-between my-2">
-                  <span className="text-sm">Balance: 0.00 BTC</span>
-                </div>
-                <div className="mt-8">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    disabled={!psbt || isSubmiting}
-                    onClick={onSubmit}
-                  >
-                    {isSubmiting && <Loader2 className="animate-spin" />}
-                    Deposit
-                  </Button>
-                </div>
-                <div className="mt-2 text-xs flex flex-col gap-1">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">BTC Reserved</span>
-                    <span>{formatNumber(btcAmount)} ₿</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Coin Reserved</span>
-                    <span>
-                      {formatNumber(coinAmount)} {coin?.runeSymbol}
-                    </span>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="borrow">
-                <div className="gap-2 focus-within:border-primary border flex rounded-md items-center px-3 py-2">
-                  <Button variant="outline">Max</Button>
-                  <Input
-                    placeholder="0.00"
-                    type="number"
-                    value={inputAmount}
-                    onChange={(e) => setInputAmount(e.target.value)}
-                    className="text-right font-semibold text-xl! flex-1 border-none p-0 focus-visible:outline-none focus-visible:ring-0"
-                  />
-                  <span className="text-lg">BTC</span>
-                </div>
-                <div className="flex justify-between my-2">
-                  <span className="text-sm">Balance: 0.00 BTC</span>
-                </div>
-                <div className="mt-8">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    disabled={!Number(inputAmount)}
-                  >
-                    Borrow
-                  </Button>
-                </div>
-                <div className="mt-2 text-xs flex flex-col gap-1">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">BTC Reserved</span>
-                    <span>{formatNumber(btcAmount)} ₿</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Coin Reserved</span>
-                    <span>
-                      {formatNumber(coinAmount)} {coin?.runeSymbol}
-                    </span>
-                  </div>
-                </div>
-              </TabsContent>
-            </div>
-          </Tabs>
+    <TabsContent value="deposit">
+      <div
+        className={cn(
+          "gap-2 focus-within:border-primary border flex rounded-md items-center px-3 py-2",
+          isQuoting && "animate-pulse"
+        )}
+      >
+        <Button variant="outline">Max</Button>
+        <Input
+          placeholder="0.00"
+          type="number"
+          value={inputAmount}
+          onChange={(e) => setInputAmount(e.target.value)}
+          className="text-right font-semibold text-xl! flex-1 border-none p-0 focus-visible:outline-none focus-visible:ring-0"
+        />
+        <span className="text-lg">BTC</span>
+      </div>
+      <div className="flex justify-between my-2">
+        <span className="text-sm">
+          Balance: {btcBalance ? formatNumber(btcBalance) : "-"} BTC
+        </span>
+      </div>
+      <div className="mt-8">
+        <Button
+          className="w-full"
+          size="lg"
+          disabled={!psbt || isSubmiting || isGenerating || !paymentAddress}
+          onClick={onSubmit}
+        >
+          {(isSubmiting || isGenerating) && (
+            <Loader2 className="animate-spin" />
+          )}
+          {!paymentAddress ? "Connect Wallet" : "Deposit"}
+        </Button>
+      </div>
+      <div className="mt-2 text-xs flex flex-col gap-1">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">BTC Reserved</span>
+          <span>{formatNumber(btcAmount)} ₿</span>
         </div>
-      </DialogContent>
-    </Dialog>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Coin Reserved</span>
+          <span>
+            {formatNumber(coinAmount)} {coin?.runeSymbol}
+          </span>
+        </div>
+      </div>
+    </TabsContent>
   );
 }

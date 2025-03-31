@@ -5,7 +5,7 @@ export const UNISAT_API_URL = "https://wallet-api-testnet4.unisat.io";
 
 export const UTXO_DUST = BigInt(546);
 
-export const EXCHANGE_ID = "rwkfp-zyaaa-aaaao-qj7nq-cai";
+export const EXCHANGE_ID = "LENDING_DEMO";
 
 export const WALLETS: Record<
   string,
@@ -45,7 +45,7 @@ export const RICH: Coin = {
   name: "HOPE•YOU•GET•RICH",
   runeId: "HOPEYOUGETRICH",
   runeSymbol: "🧧",
-  decimals: 2,
+  decimals: 0,
   icon: "/rich.png",
   number: 431,
 };

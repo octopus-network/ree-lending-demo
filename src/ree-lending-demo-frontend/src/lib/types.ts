@@ -106,21 +106,28 @@ export type OutpointWithValue = {
   outpoint: string;
 };
 
-export type DepositQuote = {
+export type DepositOffer = {
   nonce: bigint;
   pool_utxo: [
     {
-      maybe_rune: [
-        {
-          id: string;
-          value: bigint;
-        }
-      ];
+      maybe_rune: [CoinBalance];
       sats: bigint;
       txid: string;
       vout: number;
     }
   ];
+};
+
+export type BorrowOffer = {
+  nonce: bigint;
+  pool_utxo: {
+    maybe_rune: [CoinBalance];
+    sats: bigint;
+    txid: string;
+    vout: number;
+  };
+  input_runes: CoinBalance;
+  output_btc: CoinBalance;
 };
 
 export interface TxInput {

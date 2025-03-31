@@ -1,11 +1,27 @@
 import { UnspentOutput } from "@/lib/types";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLaserEyes } from "@omnisat/lasereyes";
 import { UNISAT_API_URL } from "@/lib/constants";
+import { atom, useAtom } from "jotai";
+import { useSpentUtxos } from "./useSpentUtxos";
+
+export const pendingBtcUtxosAtom = atom<UnspentOutput[]>([]);
+export const pendingRuneUtxosAtom = atom<UnspentOutput[]>([]);
+
+export function usePendingBtcUtxos() {
+  return useAtom(pendingBtcUtxosAtom);
+}
+
+export function usePendingRuneUtxos() {
+  return useAtom(pendingRuneUtxosAtom);
+}
 
 export function useBtcUtxos() {
   const [utxos, setUtxos] = useState<UnspentOutput[]>();
+  const [pendingUtxos] = usePendingBtcUtxos();
+  const spentUtxos = useSpentUtxos();
+
   const [timer, setTimer] = useState<number>();
 
   const { paymentAddress, paymentPublicKey } = useLaserEyes();
@@ -51,14 +67,38 @@ export function useBtcUtxos() {
       });
   }, [timer, paymentAddress]);
 
-  return utxos;
+  return useMemo(
+    () =>
+      utxos
+        ? utxos
+            .filter(
+              (c) =>
+                spentUtxos.findIndex(
+                  (s) => s.txid === c.txid && s.vout === c.vout
+                ) < 0
+            )
+            .concat(
+              pendingUtxos.filter(
+                (p) =>
+                  !p.runes.length &&
+                  utxos.findIndex(
+                    (c) => c.txid === p.txid && c.vout === p.vout
+                  ) < 0
+              )
+            )
+        : undefined,
+    [utxos, pendingUtxos, spentUtxos]
+  );
 }
 
 export function useRuneUtxos(runeid: string | undefined) {
   const [utxos, setUtxos] = useState<UnspentOutput[]>();
+  const [pendingUtxos] = usePendingRuneUtxos();
+  const spentUtxos = useSpentUtxos();
+
   const [timer, setTimer] = useState<number>();
 
-  const { address } = useLaserEyes();
+  const { address, publicKey } = useLaserEyes();
 
   useEffect(() => {
     setInterval(() => {
@@ -67,7 +107,7 @@ export function useRuneUtxos(runeid: string | undefined) {
   }, []);
 
   useEffect(() => {
-    if (!address || !runeid) {
+    if (!address || !runeid || !publicKey) {
       return;
     }
     axios
@@ -99,6 +139,7 @@ export function useRuneUtxos(runeid: string | undefined) {
             scriptPk: utxo.scriptPk,
             txid: utxo.txid,
             vout: utxo.vout,
+            pubkey: publicKey,
             runes: utxo.runes.map((rune) => ({
               id: rune.runeid,
               amount: rune.amount,
@@ -109,5 +150,26 @@ export function useRuneUtxos(runeid: string | undefined) {
       });
   }, [timer, address]);
 
-  return utxos;
+  return useMemo(
+    () =>
+      utxos
+        ? utxos
+            .filter(
+              (c) =>
+                spentUtxos.findIndex(
+                  (s) => s.txid === c.txid && s.vout === c.vout
+                ) < 0
+            )
+            .concat(
+              pendingUtxos.filter(
+                (p) =>
+                  p.runes.length &&
+                  utxos.findIndex(
+                    (c) => c.txid === p.txid && c.vout === p.vout
+                  ) < 0
+              )
+            )
+        : undefined,
+    [utxos, pendingUtxos, spentUtxos]
+  );
 }
