@@ -6,7 +6,6 @@
   "scripts": {
     "setup": "npm i && dfx canister create ree-lending-demo-backend && dfx generate ree-lending-demo-backend && dfx deploy",
     "start": "vite --port 3000",
-    "prebuild": "dfx generate",
     "build": "tsc && vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\""
   },
