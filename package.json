@@ -14,8 +14,5 @@
   "type": "module",
   "workspaces": [
     "src/ree-lending-demo-frontend"
-  ],
-  "dependencies": {
-    "@rollup/plugin-inject": "^5.0.5"
-  }
+  ]
 }
