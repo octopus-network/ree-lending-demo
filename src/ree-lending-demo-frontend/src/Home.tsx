@@ -50,7 +50,7 @@ export default function Home() {
         from: [],
         limit: 20,
       })
-      .then((res: Pool[]) => {
+      .then((res: any) => {
         setPoolList(res);
       });
   }, [timer]);

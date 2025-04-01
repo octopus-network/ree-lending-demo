@@ -99,7 +99,7 @@ export function BorrowContent({
         id: BITCOIN.id,
         value: BigInt(btcAmount),
       })
-      .then((res: { Ok: BorrowOffer }) => {
+      .then((res: any) => {
         if (res.Ok) {
           setBorrowOffer(res.Ok);
         }
@@ -218,24 +218,24 @@ export function BorrowContent({
 
       const edicts = needChange
         ? [
-            new Edict(
-              new RuneId(Number(runeBlock), Number(runeIdx)),
-              changeRuneAmount,
-              0
-            ),
-            new Edict(
-              new RuneId(Number(runeBlock), Number(runeIdx)),
-              poolRuneAmount + runeAmount,
-              1
-            ),
-          ]
+          new Edict(
+            new RuneId(Number(runeBlock), Number(runeIdx)),
+            changeRuneAmount,
+            0
+          ),
+          new Edict(
+            new RuneId(Number(runeBlock), Number(runeIdx)),
+            poolRuneAmount + runeAmount,
+            1
+          ),
+        ]
         : [
-            new Edict(
-              new RuneId(Number(runeBlock), Number(runeIdx)),
-              poolRuneAmount + runeAmount,
-              0
-            ),
-          ];
+          new Edict(
+            new RuneId(Number(runeBlock), Number(runeIdx)),
+            poolRuneAmount + runeAmount,
+            0
+          ),
+        ];
 
       const runestone = new Runestone(edicts, none(), none(), none());
 
@@ -513,11 +513,11 @@ export function BorrowContent({
           <span className="text-right flex-1 text-lg font-semibold">
             {borrowOffer
               ? formatNumber(
-                  formatCoinAmount(
-                    borrowOffer.input_runes.value.toString(),
-                    coin
-                  )
+                formatCoinAmount(
+                  borrowOffer.input_runes.value.toString(),
+                  coin
                 )
+              )
               : "-"}
           </span>
           <span className="text-lg">{coin?.runeSymbol}</span>

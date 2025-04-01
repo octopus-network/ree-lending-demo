@@ -95,7 +95,7 @@ export function DepositContent({
         id: BITCOIN.id,
         value: BigInt(btcAmount),
       })
-      .then((res: { Ok: DepositOffer }) => {
+      .then((res: any) => {
         if (res.Ok) {
           setDepositOffer(res.Ok);
         }
