@@ -1,12 +1,11 @@
+import * as bitcoin from "bitcoinjs-lib";
+
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Coin } from "./types";
 import Decimal from "decimal.js";
-import * as bitcoin from "bitcoinjs-lib";
-import * as ecc from "@bitcoinerlab/secp256k1";
-import { AddressType, TxOutputType, UnspentOutput, TxInput } from "./types";
 
-bitcoin.initEccLib(ecc);
+import { AddressType, TxOutputType, UnspentOutput, TxInput } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -153,7 +152,7 @@ export function formatCoinAmount(value: string, coin: Coin | undefined) {
 
 export function getP2trAressAndScript(pubkey: string) {
   const { address, output } = bitcoin.payments.p2tr({
-    internalPubkey: hexToBytes(pubkey),
+    internalPubkey: Buffer.from(pubkey, "hex"),
     network: bitcoin.networks.testnet,
   });
 
@@ -268,8 +267,8 @@ export function utxoToInput(utxo: UnspentOutput, estimate?: boolean): TxInput {
     hash: utxo.txid,
     index: utxo.vout,
     witnessUtxo: {
-      value: BigInt(utxo.satoshis),
-      script: hexToBytes(utxo.scriptPk),
+      value: Number(utxo.satoshis),
+      script: Buffer.from(utxo.scriptPk, "hex"),
     },
   };
   if (
@@ -283,10 +282,10 @@ export function utxoToInput(utxo: UnspentOutput, estimate?: boolean): TxInput {
       hash: utxo.txid,
       index: utxo.vout,
       witnessUtxo: {
-        value: BigInt(utxo.satoshis),
-        script: hexToBytes(utxo.scriptPk),
+        value: Number(utxo.satoshis),
+        script: Buffer.from(utxo.scriptPk, "hex"),
       },
-      tapInternalKey: hexToBytes(pubkey),
+      tapInternalKey: Buffer.from(pubkey, "hex"),
     };
   } else if (utxo.addressType === AddressType.P2PKH) {
     if (!utxo.rawtx || estimate) {
@@ -294,8 +293,8 @@ export function utxoToInput(utxo: UnspentOutput, estimate?: boolean): TxInput {
         hash: utxo.txid,
         index: utxo.vout,
         witnessUtxo: {
-          value: BigInt(utxo.satoshis),
-          script: hexToBytes(utxo.scriptPk),
+          value: Number(utxo.satoshis),
+          script: Buffer.from(utxo.scriptPk, "hex"),
         },
       };
       return {
@@ -305,7 +304,7 @@ export function utxoToInput(utxo: UnspentOutput, estimate?: boolean): TxInput {
     }
   } else if (utxo.addressType === AddressType.P2SH_P2WPKH && utxo.pubkey) {
     const redeemData = bitcoin.payments.p2wpkh({
-      pubkey: hexToBytes(utxo.pubkey),
+      pubkey: Buffer.from(utxo.pubkey, "hex"),
       network: bitcoin.networks.testnet,
     });
 
@@ -313,8 +312,8 @@ export function utxoToInput(utxo: UnspentOutput, estimate?: boolean): TxInput {
       hash: utxo.txid,
       index: utxo.vout,
       witnessUtxo: {
-        value: BigInt(utxo.satoshis),
-        script: hexToBytes(utxo.scriptPk),
+        value: Number(utxo.satoshis),
+        script: Buffer.from(utxo.scriptPk, "hex"),
       },
       redeemScript: redeemData.output,
     };

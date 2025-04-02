@@ -1,7 +1,9 @@
+import * as bitcoin from "bitcoinjs-lib";
+
 import { TabsContent } from "@/components/ui/tabs";
 import { COIN_LIST, BITCOIN, UTXO_DUST, EXCHANGE_ID } from "@/lib/constants";
 import { useEffect, useMemo, useState } from "react";
-import * as bitcoin from "bitcoinjs-lib";
+
 import { useLaserEyes } from "@omnisat/lasereyes";
 import { RuneId, Runestone, none, Edict } from "runelib";
 
@@ -33,7 +35,7 @@ import {
 } from "@/lib/types";
 
 import { toast } from "sonner";
-import { ree_lending_demo_backend } from "declarations/ree-lending-demo-backend";
+import { actor as lendingActor } from "@/lib/exchange/actor";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useBtcUtxos, useRuneUtxos } from "@/hooks/useUtxos";
 import { Loader2 } from "lucide-react";
@@ -94,7 +96,7 @@ export function BorrowContent({
 
     const btcAmount = parseCoinAmount(debouncedInputAmount, BITCOIN);
     setIsQuoting(true);
-    ree_lending_demo_backend
+    lendingActor
       .pre_borrow(pool.address, {
         id: BITCOIN.id,
         value: BigInt(btcAmount),
@@ -218,24 +220,24 @@ export function BorrowContent({
 
       const edicts = needChange
         ? [
-          new Edict(
-            new RuneId(Number(runeBlock), Number(runeIdx)),
-            changeRuneAmount,
-            0
-          ),
-          new Edict(
-            new RuneId(Number(runeBlock), Number(runeIdx)),
-            poolRuneAmount + runeAmount,
-            1
-          ),
-        ]
+            new Edict(
+              new RuneId(Number(runeBlock), Number(runeIdx)),
+              changeRuneAmount,
+              0
+            ),
+            new Edict(
+              new RuneId(Number(runeBlock), Number(runeIdx)),
+              poolRuneAmount + runeAmount,
+              1
+            ),
+          ]
         : [
-          new Edict(
-            new RuneId(Number(runeBlock), Number(runeIdx)),
-            poolRuneAmount + runeAmount,
-            0
-          ),
-        ];
+            new Edict(
+              new RuneId(Number(runeBlock), Number(runeIdx)),
+              poolRuneAmount + runeAmount,
+              0
+            ),
+          ];
 
       const runestone = new Runestone(edicts, none(), none(), none());
 
@@ -244,7 +246,7 @@ export function BorrowContent({
       if (needChange) {
         _psbt.addOutput({
           address,
-          value: UTXO_DUST,
+          value: Number(UTXO_DUST),
         });
         poolVouts.push(1);
       } else {
@@ -253,19 +255,19 @@ export function BorrowContent({
 
       _psbt.addOutput({
         address: poolAddress,
-        value: poolBtcAmount - borrowBtcAmount,
+        value: Number(poolBtcAmount - borrowBtcAmount),
       });
 
       _psbt.addOutput({
         address: paymentAddress,
-        value: borrowBtcAmount,
+        value: Number(borrowBtcAmount),
       });
 
       const opReturnScript = runestone.encipher();
       // OP_RETURN
       _psbt.addOutput({
         script: opReturnScript,
-        value: BigInt(0),
+        value: 0,
       });
 
       let inputTypes = [
@@ -355,7 +357,7 @@ export function BorrowContent({
       if (changeBtcAmount > UTXO_DUST) {
         _psbt.addOutput({
           address: paymentAddress,
-          value: changeBtcAmount,
+          value: Number(changeBtcAmount),
         });
       }
 
@@ -513,11 +515,11 @@ export function BorrowContent({
           <span className="text-right flex-1 text-lg font-semibold">
             {borrowOffer
               ? formatNumber(
-                formatCoinAmount(
-                  borrowOffer.input_runes.value.toString(),
-                  coin
+                  formatCoinAmount(
+                    borrowOffer.input_runes.value.toString(),
+                    coin
+                  )
                 )
-              )
               : "-"}
           </span>
           <span className="text-lg">{coin?.runeSymbol}</span>

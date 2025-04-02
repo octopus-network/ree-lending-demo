@@ -134,9 +134,9 @@ export interface TxInput {
   data: {
     hash: string;
     index: number;
-    witnessUtxo?: { value: bigint; script: Uint8Array };
-    tapInternalKey?: Uint8Array;
-    nonWitnessUtxo?: Uint8Array;
+    witnessUtxo?: { value: number; script: Buffer };
+    tapInternalKey?: Buffer;
+    nonWitnessUtxo?: Buffer;
   };
   utxo: UnspentOutput;
 }

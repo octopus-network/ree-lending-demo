@@ -1,7 +1,9 @@
+import * as bitcoin from "bitcoinjs-lib";
+
 import { TabsContent } from "@/components/ui/tabs";
 import { COIN_LIST, BITCOIN, UTXO_DUST, EXCHANGE_ID } from "@/lib/constants";
 import { useEffect, useMemo, useState } from "react";
-import * as bitcoin from "bitcoinjs-lib";
+
 import { useLaserEyes } from "@omnisat/lasereyes";
 import { RuneId, Runestone, none, Edict } from "runelib";
 
@@ -32,7 +34,7 @@ import {
 } from "@/lib/types";
 
 import { toast } from "sonner";
-import { ree_lending_demo_backend } from "declarations/ree-lending-demo-backend";
+import { actor as lendingActor } from "@/lib/exchange/actor";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useBtcUtxos } from "@/hooks/useUtxos";
 import { Loader2 } from "lucide-react";
@@ -90,7 +92,7 @@ export function DepositContent({
 
     const btcAmount = parseCoinAmount(debouncedInputAmount, BITCOIN);
     setIsQuoting(true);
-    ree_lending_demo_backend
+    lendingActor
       .pre_deposit(pool.address, {
         id: BITCOIN.id,
         value: BigInt(btcAmount),
@@ -166,14 +168,14 @@ export function DepositContent({
 
       _psbt.addOutput({
         address: poolAddress,
-        value: poolBtcAmount + depositBtcAmount,
+        value: Number(poolBtcAmount + depositBtcAmount),
       });
 
       const opReturnScript = runestone.encipher();
       // OP_RETURN
       _psbt.addOutput({
         script: opReturnScript,
-        value: BigInt(0),
+        value: 0,
       });
 
       let inputTypes = [addressTypeToString(getAddressType(poolAddress))];
@@ -251,7 +253,7 @@ export function DepositContent({
       if (changeBtcAmount > UTXO_DUST) {
         _psbt.addOutput({
           address: paymentAddress,
-          value: changeBtcAmount,
+          value: Number(changeBtcAmount),
         });
       }
 
