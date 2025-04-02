@@ -46,12 +46,20 @@ export default function Home() {
 
   useEffect(() => {
     lendingActor
-      .get_pool_list({
-        from: [],
-        limit: 20,
+      .get_pool_list()
+      .then((res: any) => {
+        const poolAddresses = res.map(({ address }: any) => address);
+
+        return Promise.all(
+          poolAddresses.map((address: string) =>
+            lendingActor
+              .get_pool_info({ pool_address: address })
+              .then((res: any) => (res?.length ? res[0] : null))
+          )
+        );
       })
       .then((res: any) => {
-        setPoolList(res);
+        setPoolList(res.filter((item: any) => !!item));
       });
   }, [timer]);
 
