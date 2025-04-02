@@ -14,6 +14,7 @@ export const idlFactory = ({ IDL }) => {
     'pool_address' : IDL.Text,
   });
   const IntentionSet = IDL.Record({
+    'tx_fee_in_sats' : IDL.Nat64,
     'initiator_address' : IDL.Text,
     'intentions' : IDL.Vec(Intention),
   });
@@ -25,11 +26,6 @@ export const idlFactory = ({ IDL }) => {
     'psbt_hex' : IDL.Text,
   });
   const Result = IDL.Variant({ 'Ok' : IDL.Text, 'Err' : IDL.Text });
-  const FinalizeTxArgs = IDL.Record({
-    'txid' : IDL.Text,
-    'pool_key' : IDL.Text,
-  });
-  const Result_1 = IDL.Variant({ 'Ok' : IDL.Null, 'Err' : IDL.Text });
   const GetMinimalTxValueArgs = IDL.Record({
     'zero_confirmed_tx_queue_length' : IDL.Nat32,
     'pool_address' : IDL.Text,
@@ -52,9 +48,13 @@ export const idlFactory = ({ IDL }) => {
     'nonce' : IDL.Nat64,
     'utxos' : IDL.Vec(Utxo),
   });
-  const GetPoolListArgs = IDL.Record({
-    'from' : IDL.Opt(IDL.Text),
-    'limit' : IDL.Nat32,
+  const PoolBasic = IDL.Record({ 'name' : IDL.Text, 'address' : IDL.Text });
+  const Result_1 = IDL.Variant({ 'Ok' : IDL.Null, 'Err' : IDL.Text });
+  const NewBlockInfo = IDL.Record({
+    'block_hash' : IDL.Text,
+    'confirmed_txids' : IDL.Vec(IDL.Text),
+    'block_timestamp' : IDL.Nat64,
+    'block_height' : IDL.Nat32,
   });
   const BorrowOffer = IDL.Record({
     'pool_utxo' : Utxo,
@@ -81,9 +81,9 @@ export const idlFactory = ({ IDL }) => {
     'nonce' : IDL.Nat64,
   });
   const Result_3 = IDL.Variant({ 'Ok' : DepositOffer, 'Err' : ExchangeError });
+  const RollbackTxArgs = IDL.Record({ 'txid' : IDL.Text });
   return IDL.Service({
     'execute_tx' : IDL.Func([ExecuteTxArgs], [Result], []),
-    'finalize_tx' : IDL.Func([FinalizeTxArgs], [Result_1], []),
     'get_minimal_tx_value' : IDL.Func(
         [GetMinimalTxValueArgs],
         [IDL.Nat64],
@@ -94,15 +94,12 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(PoolInfo)],
         ['query'],
       ),
-    'get_pool_list' : IDL.Func(
-        [GetPoolListArgs],
-        [IDL.Vec(PoolInfo)],
-        ['query'],
-      ),
+    'get_pool_list' : IDL.Func([], [IDL.Vec(PoolBasic)], ['query']),
     'init_pool' : IDL.Func([], [Result_1], []),
+    'new_block' : IDL.Func([NewBlockInfo], [Result_1], []),
     'pre_borrow' : IDL.Func([IDL.Text, CoinBalance], [Result_2], ['query']),
     'pre_deposit' : IDL.Func([IDL.Text, CoinBalance], [Result_3], ['query']),
-    'rollback_tx' : IDL.Func([FinalizeTxArgs], [Result_1], []),
+    'rollback_tx' : IDL.Func([RollbackTxArgs], [Result_1], []),
   });
 };
 export const init = ({ IDL }) => { return []; };
