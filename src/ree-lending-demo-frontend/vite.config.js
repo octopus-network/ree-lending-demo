@@ -6,13 +6,18 @@ import { defineConfig } from "vite";
 import environment from "vite-plugin-environment";
 import dotenv from "dotenv";
 
-import inject from "@rollup/plugin-inject";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 dotenv.config({ path: "../../.env" });
 
 export default defineConfig({
   build: {
     emptyOutDir: true,
+    commonjsOptions: {
+      transformMixedEsModules: true,
+      requireReturnsDefault: "namespace",
+    },
+    target: "esnext",
   },
   optimizeDeps: {
     esbuildOptions: {
@@ -20,7 +25,7 @@ export default defineConfig({
         global: "globalThis",
       },
     },
-    include: ["buffer"],
+    include: ["bip39", "tiny-secp256k1", "bitcoinjs-lib"],
   },
   server: {
     proxy: {
@@ -35,8 +40,10 @@ export default defineConfig({
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
     tailwindcss(),
-    inject({
-      Buffer: ["buffer", "Buffer"],
+    nodePolyfills({
+      globals: {
+        Buffer: true,
+      },
     }),
   ],
   resolve: {

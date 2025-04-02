@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ree_lending_demo_backend } from "declarations/ree-lending-demo-backend";
+import { actor as lendingActor } from "@/lib/exchange/actor";
 import { Pool } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 import { usePendingBtcUtxos, usePendingRuneUtxos } from "./hooks/useUtxos";
@@ -45,7 +45,7 @@ export default function Home() {
   }, [paymentAddress, paymentPublicKey, setPendingBtcUtxos, timer]);
 
   useEffect(() => {
-    ree_lending_demo_backend
+    lendingActor
       .get_pool_list({
         from: [],
         limit: 20,
