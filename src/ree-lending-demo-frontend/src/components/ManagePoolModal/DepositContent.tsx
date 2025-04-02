@@ -51,6 +51,7 @@ export function DepositContent({
   const [isSubmiting, setIsSubmiting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const [fee, setFee] = useState(BigInt(1));
   const { paymentAddress, address, signPsbt } = useLaserEyes();
   const [coin, coinReserved, btcReserved] = useMemo(() => {
     const coin = COIN_LIST.find((coin) => coin.id === pool.coin_reserved[0].id);
@@ -320,6 +321,8 @@ export function DepositContent({
 
       setPsbt(_psbt);
       setIsGenerating(false);
+
+      setFee(currentFee);
     };
 
     genPsbt();
@@ -341,6 +344,7 @@ export function DepositContent({
 
       const txid = await Orchestrator.invoke({
         intention_set: {
+          tx_fee_in_sats: fee,
           initiator_address: paymentAddress,
           intentions: [
             {

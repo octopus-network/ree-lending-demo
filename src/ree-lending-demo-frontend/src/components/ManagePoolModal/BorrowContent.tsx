@@ -61,6 +61,7 @@ export function BorrowContent({
   const [inputAmount, setInputAmount] = useState("");
   const [borrowOffer, setBorrowOffer] = useState<BorrowOffer>();
   const [toSpendUtxos, setToSpendUtxos] = useState<UnspentOutput[]>([]);
+  const [fee, setFee] = useState(BigInt(1));
 
   const btcUtxos = useBtcUtxos();
   const runeUtxos = useRuneUtxos(coin?.id);
@@ -434,6 +435,7 @@ export function BorrowContent({
 
       setPsbt(_psbt);
       setIsGenerating(false);
+      setFee(currentFee);
     };
 
     genPsbt();
@@ -455,6 +457,7 @@ export function BorrowContent({
 
       const txid = await Orchestrator.invoke({
         intention_set: {
+          tx_fee_in_sats: fee,
           initiator_address: paymentAddress,
           intentions: [
             {
