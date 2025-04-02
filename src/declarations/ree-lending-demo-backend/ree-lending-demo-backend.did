@@ -1,0 +1,84 @@
+type BorrowOffer = record {
+  pool_utxo : Utxo;
+  nonce : nat64;
+  input_runes : CoinBalance;
+  output_btc : CoinBalance;
+};
+type CoinBalance = record { id : text; value : nat };
+type DepositOffer = record { pool_utxo : opt Utxo; nonce : nat64 };
+type ExchangeError = variant {
+  InvalidSignPsbtArgs : text;
+  Overflow;
+  PoolAddressNotFound;
+  PoolStateExpired : nat64;
+  TooSmallFunds;
+  InvalidPool;
+  InvalidPsbt : text;
+  InvalidTxid;
+  EmptyPool;
+  ChainKeyError;
+  InvalidState : text;
+};
+type ExecuteTxArgs = record {
+  zero_confirmed_tx_queue_length : nat32;
+  txid : text;
+  intention_set : IntentionSet;
+  intention_index : nat32;
+  psbt_hex : text;
+};
+type FinalizeTxArgs = record { txid : text; pool_key : text };
+type GetMinimalTxValueArgs = record {
+  zero_confirmed_tx_queue_length : nat32;
+  pool_address : text;
+};
+type GetPoolInfoArgs = record { pool_address : text };
+type GetPoolListArgs = record { from : opt text; limit : nat32 };
+type InputCoin = record { coin : CoinBalance; from : text };
+type Intention = record {
+  input_coins : vec InputCoin;
+  output_coins : vec OutputCoin;
+  action : text;
+  exchange_id : text;
+  pool_utxo_spend : vec text;
+  action_params : text;
+  nonce : nat64;
+  pool_utxo_receive : vec text;
+  pool_address : text;
+};
+type IntentionSet = record {
+  initiator_address : text;
+  intentions : vec Intention;
+};
+type OutputCoin = record { to : text; coin : CoinBalance };
+type PoolInfo = record {
+  key : text;
+  name : text;
+  btc_reserved : nat64;
+  key_derivation_path : vec blob;
+  coin_reserved : vec CoinBalance;
+  attributes : text;
+  address : text;
+  nonce : nat64;
+  utxos : vec Utxo;
+};
+type Result = variant { Ok : text; Err : text };
+type Result_1 = variant { Ok; Err : text };
+type Result_2 = variant { Ok : BorrowOffer; Err : ExchangeError };
+type Result_3 = variant { Ok : DepositOffer; Err : ExchangeError };
+type Utxo = record {
+  maybe_rune : opt CoinBalance;
+  sats : nat64;
+  txid : text;
+  vout : nat32;
+};
+service : {
+  execute_tx : (ExecuteTxArgs) -> (Result);
+  finalize_tx : (FinalizeTxArgs) -> (Result_1);
+  get_minimal_tx_value : (GetMinimalTxValueArgs) -> (nat64) query;
+  get_pool_info : (GetPoolInfoArgs) -> (opt PoolInfo) query;
+  get_pool_list : (GetPoolListArgs) -> (vec PoolInfo) query;
+  init_pool : () -> (Result_1);
+  pre_borrow : (text, CoinBalance) -> (Result_2) query;
+  pre_deposit : (text, CoinBalance) -> (Result_3) query;
+  rollback_tx : (FinalizeTxArgs) -> (Result_1);
+}

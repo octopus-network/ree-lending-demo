@@ -4,6 +4,7 @@ use ic_cdk_macros::{query, update};
 use ree_types::{
     CoinBalance, CoinId, Utxo,
     bitcoin::{Address, Network},
+    schnorr::request_schnorr_key,
 };
 use serde::Serialize;
 
@@ -63,7 +64,7 @@ async fn init_pool() -> Result<(), String> {
         return Err("Not authorized".to_string());
     }
     let rune_id = "72798:1058";
-    let untweaked = crate::request_schnorr_key("key_1", rune_id.as_bytes().to_vec())
+    let untweaked = request_schnorr_key("key_1", rune_id.as_bytes().to_vec())
         .await
         .unwrap();
     let meta = CoinMeta {

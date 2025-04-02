@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "src/ree-lending-demo-backend",
-    "src/ree-lending-demo-backend/crates/*"
+    "src/ree-lending-demo-backend"
 ]
 resolver = "2"
