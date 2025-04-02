@@ -112,6 +112,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     pool_address: IDL.Text,
   });
   const IntentionSet = IDL.Record({
+    tx_fee_in_sats: IDL.Nat64,
     initiator_address: IDL.Text,
     intentions: IDL.Vec(Intention),
   });
@@ -272,7 +273,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     ),
     get_tx_sent: IDL.Func([IDL.Text], [IDL.Opt(TxDetailView)], ["query"]),
     get_used_outpoints: IDL.Func(
-      [],
+      [IDL.Opt(IDL.Text)],
       [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
       ["query"]
     ),
