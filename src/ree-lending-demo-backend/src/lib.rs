@@ -1,6 +1,7 @@
 mod canister;
 mod exchange;
 mod pool;
+mod reorg;
 
 use crate::canister::{BorrowOffer, DepositOffer};
 use crate::pool::Pool;
@@ -11,12 +12,12 @@ use ic_stable_structures::{
 };
 use ree_types::schnorr::tweak_pubkey_with_empty;
 use ree_types::{
-    CoinBalance, Pubkey,
+    CoinBalance, Pubkey, TxRecord, Txid,
     bitcoin::{Address, Network},
     exchange_interfaces::{
-        ExecuteTxArgs, ExecuteTxResponse, FinalizeTxArgs, FinalizeTxResponse,
-        GetMinimalTxValueArgs, GetMinimalTxValueResponse, GetPoolInfoArgs, GetPoolInfoResponse,
-        GetPoolListArgs, GetPoolListResponse, RollbackTxArgs, RollbackTxResponse,
+        ExecuteTxArgs, ExecuteTxResponse, GetMinimalTxValueArgs, GetMinimalTxValueResponse,
+        GetPoolInfoArgs, GetPoolInfoResponse, GetPoolListResponse, NewBlockArgs, NewBlockInfo,
+        NewBlockResponse, RollbackTxArgs, RollbackTxResponse,
     },
 };
 use std::cell::RefCell;
@@ -60,6 +61,17 @@ thread_local! {
   static LENDING_POOLS: RefCell<StableBTreeMap<String, Pool, Memory>> = RefCell::new(
       StableBTreeMap::init(
           MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))),
+      )
+  );
+
+  static BLOCKS: RefCell<StableBTreeMap<u32, NewBlockInfo, Memory>> = RefCell::new(
+      StableBTreeMap::init(
+          MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
+      )
+  );
+  static TX_RECORDS: RefCell<StableBTreeMap<(Txid, bool), TxRecord, Memory>> = RefCell::new(
+      StableBTreeMap::init(
+          MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2))),
       )
   );
 }
