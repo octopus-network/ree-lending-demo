@@ -100,10 +100,11 @@ pub fn new_block(args: NewBlockArgs) -> NewBlockResponse {
     match crate::reorg::detect_reorg(BitcoinNetwork::Testnet, args.clone()) {
         Ok(_) => {}
         Err(crate::reorg::Error::DuplicateBlock { height, hash }) => {
-            return Err(format!(
+            ic_cdk::println!(
                 "Duplicate block detected at height {} with hash {}",
-                height, hash
-            ));
+                height,
+                hash
+            );
         }
         Err(crate::reorg::Error::Unrecoverable) => {
             return Err("Unrecoverable reorg detected".to_string());
