@@ -91,3 +91,77 @@ async fn init_pool() -> Result<(), String> {
     });
     Ok(())
 }
+
+#[update]
+async fn reset_blocks() -> Result<(), String> {
+    let caller = ic_cdk::api::caller();
+    if !ic_cdk::api::is_controller(&caller) {
+        return Err("Not authorized".to_string());
+    }
+    crate::BLOCKS.with_borrow_mut(|b| {
+        b.clear_new();
+    });
+    Ok(())
+}
+
+#[update]
+async fn reset_tx_records() -> Result<(), String> {
+    let caller = ic_cdk::api::caller();
+    if !ic_cdk::api::is_controller(&caller) {
+        return Err("Not authorized".to_string());
+    }
+    crate::TX_RECORDS.with_borrow_mut(|t| {
+        t.clear_new();
+    });
+    Ok(())
+}
+
+#[derive(Eq, PartialEq, CandidType, Clone, Debug, Deserialize, Serialize)]
+pub struct TxRecordInfo {
+    txid: String,
+    confirmed: bool,
+    records: Vec<String>,
+}
+
+#[query]
+pub fn query_tx_records() -> Result<Vec<TxRecordInfo>, String> {
+    let res = crate::TX_RECORDS.with_borrow(|t| {
+        t.iter()
+            .map(|((txid, confirmed), records)| TxRecordInfo {
+                txid: txid.to_string(),
+                confirmed,
+                records: records.pools.clone(),
+            })
+            .collect()
+    });
+
+    Ok(res)
+}
+#[derive(Eq, PartialEq, CandidType, Clone, Debug, Deserialize, Serialize)]
+pub struct BlockInfo {
+    height: u32,
+    hash: String,
+}
+
+#[query]
+pub fn query_blocks() -> Result<Vec<BlockInfo>, String> {
+    let res = crate::BLOCKS.with_borrow(|b| {
+        b.iter()
+            .map(|(_, block)| BlockInfo {
+                height: block.block_height,
+                hash: block.block_hash.clone(),
+            })
+            .collect()
+    });
+
+    Ok(res)
+}
+
+#[query]
+pub fn blocks_tx_records_count() -> Result<(u64, u64), String> {
+    let tx_records_count = crate::TX_RECORDS.with_borrow(|t| t.len());
+
+    let blocks_count = crate::BLOCKS.with_borrow(|b| b.len());
+
+    Ok((blocks_count, tx_records_count))
+}

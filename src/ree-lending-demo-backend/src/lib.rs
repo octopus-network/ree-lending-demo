@@ -10,6 +10,7 @@ use ic_stable_structures::{
     DefaultMemoryImpl, StableBTreeMap,
     memory_manager::{MemoryId, MemoryManager, VirtualMemory},
 };
+use lending::{BlockInfo, TxRecordInfo};
 use ree_types::{
     CoinBalance, TxRecord, Txid,
     exchange_interfaces::{
