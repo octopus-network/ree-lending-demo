@@ -58,8 +58,21 @@ pub(crate) fn detect_reorg(network: BitcoinNetwork, new_block: NewBlockInfo) -> 
                     ic_cdk::println!("Reorg depth is greater than the max recoverable reorg depth");
                     return Err(Error::Unrecoverable);
                 }
-                let target_block =
-                    crate::BLOCKS.with_borrow(|m| m.get(&new_block.block_height).unwrap());
+                let target_block = match crate::BLOCKS
+                    .with_borrow(|m| m.get(&new_block.block_height))
+                {
+                    Some(block) => block,
+                    None => {
+                        ic_cdk::println!(
+                            "Unable to determine the previous block height; assuming it is a duplicate block: {}",
+                            new_block.block_height
+                        );
+                        return Err(Error::DuplicateBlock {
+                            height: new_block.block_height,
+                            hash: new_block.block_hash,
+                        });
+                    }
+                };
                 if target_block.block_hash == new_block.block_hash {
                     ic_cdk::println!("New block is a duplicate block");
                     return Err(Error::DuplicateBlock {
@@ -81,7 +94,13 @@ pub fn handle_reorg(height: u32, depth: u32) {
 
     for h in (height - depth + 1..=height).rev() {
         ic_cdk::println!("Rolling back change record at height {h}");
-        let block = crate::BLOCKS.with_borrow(|m| m.get(&h).unwrap());
+        let block = match crate::BLOCKS.with_borrow(|m| m.get(&h)) {
+            Some(block) => block,
+            None => {
+                ic_cdk::println!("Block not found at height: {}, skipping", h);
+                continue;
+            }
+        };
         for txid in block.confirmed_txids.iter() {
             crate::TX_RECORDS.with_borrow_mut(|m| {
                 if let Some(record) = m.remove(&(txid.clone(), true)) {

@@ -68,11 +68,14 @@ fn get_minimal_tx_value(_args: GetMinimalTxValueArgs) -> GetMinimalTxValueRespon
 // When a transaction is rejected, this function returns the pool to its previous state
 // Only the orchestrator can call this function (ensured by the guard)
 pub fn rollback_tx(args: RollbackTxArgs) -> RollbackTxResponse {
-    crate::TX_RECORDS.with_borrow(|m| {
+    let result = crate::TX_RECORDS.with_borrow_mut(|m| {
         // Look up the transaction record (both confirmed and unconfirmed)
         let maybe_unconfirmed_record = m.get(&(args.txid.clone(), false));
         let maybe_confirmed_record = m.get(&(args.txid.clone(), true));
-        let record = maybe_confirmed_record.or(maybe_unconfirmed_record).unwrap();
+        let record = maybe_confirmed_record
+            .or(maybe_unconfirmed_record)
+            .ok_or(format!("No record found for txid: {}", args.txid))?;
+
         ic_cdk::println!(
             "rollback txid: {} with pools: {:?}",
             args.txid,
@@ -82,12 +85,23 @@ pub fn rollback_tx(args: RollbackTxArgs) -> RollbackTxResponse {
         // Roll back each affected pool to its state before this transaction
         record.pools.iter().for_each(|pool_address| {
             crate::LENDING_POOLS.with_borrow_mut(|m| {
-                let mut pool = m.get(pool_address).unwrap();
-                pool.rollback(args.txid).unwrap();
+                if let Some(mut pool) = m.get(pool_address) {
+                    if let Err(e) = pool.rollback(args.txid) {
+                        ic_cdk::println!("Rollback failed: {:?}", e);
+                    }
+                } else {
+                    ic_cdk::println!("Pool not found: {}", pool_address);
+                }
             });
         });
+
+        m.remove(&(args.txid.clone(), false));
+        m.remove(&(args.txid.clone(), true));
+
+        Ok(())
     });
-    return Ok(());
+
+    result
 }
 
 #[update(guard = "ensure_testnet4_orchestrator")]
@@ -129,7 +143,7 @@ pub fn new_block(args: NewBlockArgs) -> NewBlockResponse {
     // Mark transactions as confirmed
     for txid in confirmed_txids {
         crate::TX_RECORDS.with_borrow_mut(|m| {
-            if let Some(record) = m.get(&(txid.clone(), false)) {
+            if let Some(record) = m.remove(&(txid.clone(), false)) {
                 m.insert((txid.clone(), true), record.clone());
                 ic_cdk::println!("confirm txid: {} with pools: {:?}", txid, record.pools);
             }
@@ -156,10 +170,16 @@ pub fn new_block(args: NewBlockArgs) -> NewBlockResponse {
                             // Make transaction state permanent in each affected pool
                             record.pools.iter().for_each(|pool_address| {
                                 crate::LENDING_POOLS.with_borrow_mut(|p| {
-                                    let mut pool = p.get(pool_address).unwrap();
-                                    pool.finalize(txid.clone()).unwrap();
+                                    if let Some(mut pool) = p.get(pool_address) {
+                                        if let Err(e) = pool.finalize(txid.clone()) {
+                                            ic_cdk::println!("Finalize failed: {:?}", e);
+                                        }
+                                    } else {
+                                        ic_cdk::println!("Pool not found: {}", pool_address);
+                                    }
                                 });
                             });
+                            m.remove(&(txid.clone(), true));
                         }
                     });
                 });
