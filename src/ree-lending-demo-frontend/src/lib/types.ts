@@ -96,7 +96,7 @@ export type TxOutputType =
 
 export type EstimateMinTxFeeArgs = {
   input_types: TxOutputType[];
-  pool_address: string;
+  pool_address: string[];
   output_types: TxOutputType[];
 };
 

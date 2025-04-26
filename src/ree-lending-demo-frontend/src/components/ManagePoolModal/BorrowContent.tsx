@@ -300,7 +300,7 @@ export function BorrowContent({
 
         currentFee = await Orchestrator.getEstimateMinTxFee({
           input_types: inputTypes,
-          pool_address: poolAddress,
+          pool_address: [poolAddress],
           output_types: outputTypes,
         });
         currentFee += BigInt(1);

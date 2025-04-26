@@ -8,7 +8,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
   });
   const EstimateMinTxFeeArgs = IDL.Record({
     input_types: IDL.Vec(TxOutputType),
-    pool_address: IDL.Text,
+    pool_address: IDL.Vec(IDL.Text),
     output_types: IDL.Vec(TxOutputType),
   });
   const Result_1 = IDL.Variant({ Ok: IDL.Nat64, Err: IDL.Text });
@@ -64,39 +64,6 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     pool_address: IDL.Text,
     pool_key: IDL.Text,
   });
-  const GetFailedInvokeLogArgs = IDL.Variant({
-    All: IDL.Null,
-    ByTxid: IDL.Text,
-    ByAddress: IDL.Text,
-  });
-  const RollbackStepLogView = IDL.Record({
-    result: Result,
-    exchange_id: IDL.Text,
-    txid: IDL.Text,
-    rollback_time: IDL.Text,
-    maybe_return_time: IDL.Opt(IDL.Text),
-    pool_address: IDL.Text,
-  });
-  const Result_3 = IDL.Variant({ Ok: IDL.Text, Err: IDL.Text });
-  const ExecutionStepLogView = IDL.Record({
-    result: Result_3,
-    exchange_id: IDL.Text,
-    maybe_return_time: IDL.Opt(IDL.Text),
-    calling_method: IDL.Text,
-    calling_args: IDL.Text,
-    pool_address: IDL.Text,
-    calling_time: IDL.Text,
-  });
-  const InvokeLogView = IDL.Record({
-    invoke_args: IDL.Text,
-    invoke_time: IDL.Text,
-    finalized_time: IDL.Opt(IDL.Text),
-    rollback_steps: IDL.Vec(RollbackStepLogView),
-    confirmed_time: IDL.Opt(IDL.Text),
-    execution_steps: IDL.Vec(ExecutionStepLogView),
-    processing_result: Result_3,
-    broadcasted_time: IDL.Opt(IDL.Text),
-  });
   const CoinBalance = IDL.Record({ id: IDL.Text, value: IDL.Nat });
   const InputCoin = IDL.Record({ coin: CoinBalance, from: IDL.Text });
   const OutputCoin = IDL.Record({ to: IDL.Text, coin: CoinBalance });
@@ -116,15 +83,41 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     initiator_address: IDL.Text,
     intentions: IDL.Vec(Intention),
   });
+  const ExecuteTxArgs = IDL.Record({
+    zero_confirmed_tx_queue_length: IDL.Nat32,
+    txid: IDL.Text,
+    intention_set: IntentionSet,
+    intention_index: IDL.Nat32,
+    psbt_hex: IDL.Text,
+  });
+  const GetFailedInvokeLogArgs = IDL.Variant({
+    All: IDL.Null,
+    ByTxid: IDL.Text,
+    ByAddress: IDL.Text,
+  });
+  const Result_3 = IDL.Variant({ Ok: IDL.Text, Err: IDL.Text });
+  const ExecutionStepLogView = IDL.Record({
+    result: Result_3,
+    exchange_id: IDL.Text,
+    maybe_return_time: IDL.Opt(IDL.Text),
+    calling_method: IDL.Text,
+    calling_args: IDL.Text,
+    pool_address: IDL.Text,
+    calling_time: IDL.Text,
+  });
+  const InvokeLogView = IDL.Record({
+    rollback_results: IDL.Vec(IDL.Text),
+    invoke_args: IDL.Text,
+    invoke_time: IDL.Text,
+    finalized_time: IDL.Opt(IDL.Text),
+    confirmed_time: IDL.Opt(IDL.Text),
+    execution_steps: IDL.Vec(ExecutionStepLogView),
+    processing_result: Result_3,
+    broadcasted_time: IDL.Opt(IDL.Text),
+  });
   const InvokeArgs = IDL.Record({
     intention_set: IntentionSet,
     psbt_hex: IDL.Text,
-  });
-  const MempoolTxFeeRateView = IDL.Record({
-    low: IDL.Nat64,
-    high: IDL.Nat64,
-    update_time: IDL.Text,
-    medium: IDL.Nat64,
   });
   const BlockBasic = IDL.Record({
     block_hash: IDL.Text,
@@ -169,12 +162,17 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     max_intentions_per_invoke: IDL.Nat32,
     bitcoin_network: BitcoinNetwork,
   });
-  const ExecuteTxArgs = IDL.Record({
-    zero_confirmed_tx_queue_length: IDL.Nat32,
-    txid: IDL.Text,
-    intention_set: IntentionSet,
-    intention_index: IDL.Nat32,
-    psbt_hex: IDL.Text,
+  const MempoolTxFeeRateView = IDL.Record({
+    low: IDL.Nat64,
+    high: IDL.Nat64,
+    update_time: IDL.Text,
+    medium: IDL.Nat64,
+  });
+  const OrchestratorStatus = IDL.Record({
+    last_block: IDL.Opt(BlockBasic),
+    pending_tx_count: IDL.Nat64,
+    mempool_tx_fee_rate: MempoolTxFeeRateView,
+    invoke_paused: IDL.Bool,
   });
   const TxStatus = IDL.Variant({
     Confirmed: IDL.Nat32,
@@ -205,6 +203,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     name: IDL.Text,
     description: IDL.Text,
   });
+  const Result_4 = IDL.Variant({ Ok: IDL.Vec(IDL.Text), Err: IDL.Text });
   const SaveIncludedBlockForTxArgs = IDL.Record({
     txid: IDL.Text,
     timestamp: IDL.Nat64,
@@ -216,7 +215,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     medium: IDL.Nat64,
   });
   return IDL.Service({
-    clean_failed_invoke_logs: IDL.Func(
+    clear_failed_invoke_logs: IDL.Func(
       [IDL.Opt(IDL.Nat64), IDL.Vec(IDL.Text)],
       [Result],
       []
@@ -228,6 +227,11 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     ),
     get_canister_info: IDL.Func([IDL.Nat64], [Result_2], []),
     get_exchange_pools: IDL.Func([], [IDL.Vec(ExchangePool)], ["query"]),
+    get_execute_tx_args_of_failed_invoke: IDL.Func(
+      [IDL.Text, IDL.Nat64],
+      [IDL.Opt(ExecuteTxArgs)],
+      ["query"]
+    ),
     get_failed_invoke_logs: IDL.Func(
       [GetFailedInvokeLogArgs],
       [IDL.Vec(IDL.Tuple(IDL.Text, InvokeLogView))],
@@ -243,9 +247,8 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
       [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Opt(IDL.Nat32)))],
       ["query"]
     ),
-    get_mempool_tx_fee_rate: IDL.Func([], [MempoolTxFeeRateView], ["query"]),
     get_received_blocks: IDL.Func(
-      [IDL.Opt(IDL.Nat32), IDL.Opt(IDL.Bool)],
+      [IDL.Opt(IDL.Bool)],
       [IDL.Vec(ReceivedBlockView)],
       ["query"]
     ),
@@ -256,11 +259,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
       ["query"]
     ),
     get_settings: IDL.Func([], [OrchestratorSettings], ["query"]),
-    get_sign_psbt_args_of_failed_invoke: IDL.Func(
-      [IDL.Text, IDL.Nat64],
-      [IDL.Opt(ExecuteTxArgs)],
-      ["query"]
-    ),
+    get_status: IDL.Func([], [OrchestratorStatus], ["query"]),
     get_tx_for_outpoint: IDL.Func(
       [IDL.Text],
       [IDL.Opt(TxDetailView)],
@@ -296,6 +295,8 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     new_block_detected: IDL.Func([NewBlockDetectedArgs], [Result], []),
     register_exchange: IDL.Func([ExchangeMetadata], [Result], []),
     reject_tx: IDL.Func([IDL.Text, IDL.Text], [Result], []),
+    rollback_tx: IDL.Func([IDL.Text], [Result_4], []),
+    rollback_tx_in_exchange: IDL.Func([IDL.Text, IDL.Text], [Result], []),
     save_included_block_for_tx: IDL.Func(
       [SaveIncludedBlockForTxArgs],
       [Result],
