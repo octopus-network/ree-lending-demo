@@ -5,6 +5,8 @@ export const UNISAT_API_URL = "https://wallet-api-testnet4.unisat.io";
 
 export const UTXO_DUST = BigInt(546);
 
+export const UNCONFIRMED_HEIGHT = 4194303;
+
 export const EXCHANGE_ID = "LENDING_DEMO";
 
 export const WALLETS: Record<

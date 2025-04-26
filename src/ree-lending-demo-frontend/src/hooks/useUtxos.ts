@@ -5,6 +5,7 @@ import { useLaserEyes } from "@omnisat/lasereyes";
 import { UNISAT_API_URL } from "@/lib/constants";
 import { atom, useAtom } from "jotai";
 import { useSpentUtxos } from "./useSpentUtxos";
+import { UNCONFIRMED_HEIGHT } from "@/lib/constants";
 
 export const pendingBtcUtxosAtom = atom<UnspentOutput[]>([]);
 export const pendingRuneUtxosAtom = atom<UnspentOutput[]>([]);
@@ -22,15 +23,7 @@ export function useBtcUtxos() {
   const [pendingUtxos] = usePendingBtcUtxos();
   const spentUtxos = useSpentUtxos();
 
-  const [timer, setTimer] = useState<number>();
-
   const { paymentAddress, paymentPublicKey } = useLaserEyes();
-
-  useEffect(() => {
-    setInterval(() => {
-      setTimer(new Date().getTime());
-    }, 30 * 1000);
-  }, []);
 
   useEffect(() => {
     console.log("paymentAddress", paymentAddress);
@@ -52,20 +45,22 @@ export function useBtcUtxos() {
       .then((res) => res.data)
       .then(({ data }) => {
         setUtxos(
-          data.map((utxo) => ({
-            addressType: utxo.addressType,
-            height: utxo.height,
-            pubkey: paymentPublicKey,
-            satoshis: utxo.satoshis.toString(),
-            scriptPk: utxo.scriptPk,
-            txid: utxo.txid,
-            vout: utxo.vout,
-            runes: [],
-            address: paymentAddress,
-          }))
+          data
+            .filter(({ height, txid }) => txid && height !== UNCONFIRMED_HEIGHT)
+            .map((utxo) => ({
+              addressType: utxo.addressType,
+              height: utxo.height,
+              pubkey: paymentPublicKey,
+              satoshis: utxo.satoshis.toString(),
+              scriptPk: utxo.scriptPk,
+              txid: utxo.txid,
+              vout: utxo.vout,
+              runes: [],
+              address: paymentAddress,
+            }))
         );
       });
-  }, [timer, paymentAddress]);
+  }, [paymentAddress]);
 
   return useMemo(
     () =>
@@ -96,15 +91,7 @@ export function useRuneUtxos(runeid: string | undefined) {
   const [pendingUtxos] = usePendingRuneUtxos();
   const spentUtxos = useSpentUtxos();
 
-  const [timer, setTimer] = useState<number>();
-
   const { address, publicKey } = useLaserEyes();
-
-  useEffect(() => {
-    setInterval(() => {
-      setTimer(new Date().getTime());
-    }, 30 * 1000);
-  }, []);
 
   useEffect(() => {
     if (!address || !runeid || !publicKey) {
@@ -148,7 +135,7 @@ export function useRuneUtxos(runeid: string | undefined) {
           }))
         );
       });
-  }, [timer, address]);
+  }, [address]);
 
   return useMemo(
     () =>
