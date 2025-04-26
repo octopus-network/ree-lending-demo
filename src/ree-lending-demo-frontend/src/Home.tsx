@@ -29,7 +29,7 @@ export default function Home() {
   useEffect(() => {
     if (address && publicKey) {
       Orchestrator.getUnconfirmedUtxos(address, publicKey).then((_utxos) => {
-        setPendingRuneUtxos(_utxos);
+        setPendingRuneUtxos([]);
       });
     }
   }, [address, publicKey, setPendingRuneUtxos, timer]);
@@ -38,7 +38,7 @@ export default function Home() {
     if (paymentAddress && paymentPublicKey) {
       Orchestrator.getUnconfirmedUtxos(paymentAddress, paymentPublicKey).then(
         (_utxos) => {
-          setPendingBtcUtxos(_utxos);
+          setPendingBtcUtxos([]);
         }
       );
     }
