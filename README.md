@@ -1,5 +1,11 @@
 # `ree-lending-demo`
 
+ree-lending-demo is a sample application built on REE (Runes Exchange Environment). This repository contains both frontend and backend code, implementing blockchain lending services with two main features: asset depositing and borrowing. The application is deployed at https://ree-lending-demo.vercel.app/
+
+For more detailed explanation about this application, please refer to [Unlocking Bitcoin L1 DeFi - Building A Lending DApp with REE.pdf](./Unlocking%20Bitcoin%20L1%20DeFi_%20Building%20A%20Lending%20DApp%20with%20REE.pdf).
+
+To learn more about how to build REE applications and implementation details, visit https://docs.omnity.network/docs/REE/introduction.
+
 Welcome to your new `ree-lending-demo` project and to the Internet Computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
 
 To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
