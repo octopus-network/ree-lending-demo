@@ -84,10 +84,12 @@ pub fn rollback_tx(args: RollbackTxArgs) -> RollbackTxResponse {
 
         // Roll back each affected pool to its state before this transaction
         record.pools.iter().for_each(|pool_address| {
-            crate::LENDING_POOLS.with_borrow_mut(|m| {
-                if let Some(mut pool) = m.get(pool_address) {
+            crate::LENDING_POOLS.with_borrow_mut(|pools| {
+                if let Some(mut pool) = pools.get(pool_address) {
                     if let Err(e) = pool.rollback(args.txid) {
                         ic_cdk::println!("Rollback failed: {:?}", e);
+                    } else {
+                        pools.insert(pool_address.clone(), pool);
                     }
                 } else {
                     ic_cdk::println!("Pool not found: {}", pool_address);
@@ -173,6 +175,8 @@ pub fn new_block(args: NewBlockArgs) -> NewBlockResponse {
                                     if let Some(mut pool) = p.get(pool_address) {
                                         if let Err(e) = pool.finalize(txid.clone()) {
                                             ic_cdk::println!("Finalize failed: {:?}", e);
+                                        } else {
+                                            p.insert(pool_address.clone(), pool);
                                         }
                                     } else {
                                         ic_cdk::println!("Pool not found: {}", pool_address);

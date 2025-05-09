@@ -137,6 +137,7 @@ pub fn query_tx_records() -> Result<Vec<TxRecordInfo>, String> {
 
     Ok(res)
 }
+
 #[derive(Eq, PartialEq, CandidType, Clone, Debug, Deserialize, Serialize)]
 pub struct BlockInfo {
     height: u32,
