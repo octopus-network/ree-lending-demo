@@ -120,7 +120,7 @@ export function BorrowContent({
       })
       .then((res) => res.data)
       .then((data) => {
-        setInitiatorUtxoProof(data.data);
+        setInitiatorUtxoProof(data.Ok);
       });
   }, [toSpendUtxos, paymentAddress]);
 

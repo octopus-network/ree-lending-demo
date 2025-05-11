@@ -69,7 +69,7 @@ export function DepositContent({
   const btcBalance = useCoinBalance(BITCOIN);
 
   const addSpentUtxos = useAddSpentUtxos();
-
+  
   const debouncedInputAmount = useDebounce(inputAmount, 300);
 
   const [poolSpendOutpoints, setPoolSpendOutpoints] = useState<string[]>([]);
@@ -114,7 +114,7 @@ export function DepositContent({
       })
       .then((res) => res.data)
       .then((data) => {
-        setInitiatorUtxoProof(data.data);
+        setInitiatorUtxoProof(data.Ok);
       });
   }, [toSpendUtxos, paymentAddress]);
 
