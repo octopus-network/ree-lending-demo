@@ -3,6 +3,9 @@ import { Coin } from "./types";
 
 export const UNISAT_API_URL = "https://wallet-api-testnet4.unisat.io";
 
+export const UTXO_PROOF_SERVER =
+  "https://utxo-proof-server-219952077564.us-central1.run.app";
+
 export const UTXO_DUST = BigInt(546);
 
 export const UNCONFIRMED_HEIGHT = 4194303;

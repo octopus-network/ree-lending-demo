@@ -117,6 +117,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
   });
   const InvokeArgs = IDL.Record({
     intention_set: IntentionSet,
+    initiator_utxo_proof: IDL.Vec(IDL.Nat8),
     psbt_hex: IDL.Text,
   });
   const BlockBasic = IDL.Record({
@@ -132,7 +133,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
   });
   const ExchangeStatus = IDL.Variant({
     Active: IDL.Null,
-    Halted: IDL.Record({ txid: IDL.Text }),
+    Halted: IDL.Record({ reason: IDL.Text }),
   });
   const ExchangeView = IDL.Record({
     status: ExchangeStatus,
@@ -160,6 +161,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     min_btc_amount_for_utxo: IDL.Nat64,
     rune_indexer_principal: IDL.Principal,
     max_intentions_per_invoke: IDL.Nat32,
+    max_received_blocks_count: IDL.Nat32,
     bitcoin_network: BitcoinNetwork,
   });
   const MempoolTxFeeRateView = IDL.Record({
@@ -197,13 +199,13 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     tx_ids: IDL.Vec(IDL.Text),
     block_height: IDL.Nat32,
   });
+  const Result_4 = IDL.Variant({ Ok: IDL.Vec(IDL.Text), Err: IDL.Text });
   const ExchangeMetadata = IDL.Record({
     principal: IDL.Principal,
     exchange_id: IDL.Text,
     name: IDL.Text,
     description: IDL.Text,
   });
-  const Result_4 = IDL.Variant({ Ok: IDL.Vec(IDL.Text), Err: IDL.Text });
   const SaveIncludedBlockForTxArgs = IDL.Record({
     txid: IDL.Text,
     timestamp: IDL.Nat64,
@@ -293,6 +295,11 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     ),
     invoke: IDL.Func([InvokeArgs], [Result_3], []),
     new_block_detected: IDL.Func([NewBlockDetectedArgs], [Result], []),
+    notify_exchange_for_blocks_from_height: IDL.Func(
+      [IDL.Text, IDL.Nat32],
+      [Result_4],
+      []
+    ),
     register_exchange: IDL.Func([ExchangeMetadata], [Result], []),
     reject_tx: IDL.Func([IDL.Text, IDL.Text], [Result], []),
     rollback_tx: IDL.Func([IDL.Text], [Result_4], []),
@@ -304,10 +311,12 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     ),
     set_max_input_count_of_psbt: IDL.Func([IDL.Nat32], [Result], []),
     set_max_intentions_per_invoke: IDL.Func([IDL.Nat32], [Result], []),
+    set_max_received_blocks_count: IDL.Func([IDL.Nat32], [Result], []),
     set_max_unconfirmed_tx_count_in_pool: IDL.Func([IDL.Nat32], [Result], []),
     set_min_btc_amount_for_utxo: IDL.Func([IDL.Nat64], [Result], []),
     set_min_tx_confirmations: IDL.Func([IDL.Nat32], [Result], []),
     set_tx_fee_per_vbyte: IDL.Func([SetTxFeePerVbyteArgs], [Result], []),
+    update_bitcoin_subnet_certificate: IDL.Func([IDL.Vec(IDL.Nat8)], [], []),
     version: IDL.Func([], [IDL.Text], ["query"]),
   });
 };

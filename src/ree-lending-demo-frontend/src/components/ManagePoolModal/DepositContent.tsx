@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useLaserEyes } from "@omnisat/lasereyes";
 import { RuneId, Runestone, none, Edict } from "runelib";
-
+import { reverseBuffer, hexToBytes } from "@/lib/utils";
+import { UTXO_PROOF_SERVER } from "@/lib/constants";
 import { useAddSpentUtxos } from "@/hooks/useSpentUtxos";
 import { Orchestrator } from "@/lib/orchestrator";
 import {
@@ -21,6 +22,7 @@ import {
   selectBtcUtxos,
 } from "@/lib/utils";
 
+import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +63,7 @@ export function DepositContent({
   const [inputAmount, setInputAmount] = useState("");
   const [depositOffer, setDepositOffer] = useState<DepositOffer>();
   const [toSpendUtxos, setToSpendUtxos] = useState<UnspentOutput[]>([]);
+  const [initiatorUtxoProof, setInitiatorUtxoProof] = useState<number[]>();
 
   const btcUtxos = useBtcUtxos();
   const btcBalance = useCoinBalance(BITCOIN);
@@ -85,6 +88,35 @@ export function DepositContent({
     () => formatCoinAmount(coinReserved.toString(), coin),
     [coinReserved, coin]
   );
+
+  useEffect(() => {
+    if (!toSpendUtxos.length || !paymentAddress) {
+      setInitiatorUtxoProof(undefined);
+      return;
+    }
+
+    const utxos = toSpendUtxos.filter(
+      (utxo) => utxo.address === paymentAddress
+    );
+
+    axios
+      .post(`${UTXO_PROOF_SERVER}/get_proof`, {
+        network: "Testnet",
+        btc_address: paymentAddress,
+        utxos: utxos.map(({ height, txid, satoshis, vout }: UnspentOutput) => ({
+          outpoint: {
+            txid: Array.from(reverseBuffer(hexToBytes(txid))),
+            vout,
+          },
+          value: Number(satoshis),
+          height,
+        })),
+      })
+      .then((res) => res.data)
+      .then((data) => {
+        setInitiatorUtxoProof(data.data);
+      });
+  }, [toSpendUtxos, paymentAddress]);
 
   useEffect(() => {
     if (!Number(debouncedInputAmount)) {
@@ -329,7 +361,7 @@ export function DepositContent({
   }, [depositOffer, coin, debouncedInputAmount, pool, paymentAddress, address]);
 
   const onSubmit = async () => {
-    if (!psbt || !depositOffer) {
+    if (!psbt || !depositOffer || !initiatorUtxoProof) {
       return;
     }
     setIsSubmiting(true);
@@ -343,6 +375,7 @@ export function DepositContent({
       }
 
       const txid = await Orchestrator.invoke({
+        initiator_utxo_proof: initiatorUtxoProof,
         intention_set: {
           tx_fee_in_sats: fee,
           initiator_address: paymentAddress,
@@ -376,6 +409,8 @@ export function DepositContent({
     }
   };
 
+  console.log(initiatorUtxoProof);
+
   return (
     <TabsContent value="deposit">
       <div
@@ -403,7 +438,13 @@ export function DepositContent({
         <Button
           className="w-full"
           size="lg"
-          disabled={!psbt || isSubmiting || isGenerating || !paymentAddress}
+          disabled={
+            !psbt ||
+            isSubmiting ||
+            isGenerating ||
+            !paymentAddress ||
+            !initiatorUtxoProof
+          }
           onClick={onSubmit}
         >
           {(isSubmiting || isGenerating) && (

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLaserEyes } from "@omnisat/lasereyes";
 import { RuneId, Runestone, none, Edict } from "runelib";
 
+import axios from "axios";
 import { useAddSpentUtxos } from "@/hooks/useSpentUtxos";
 import { Orchestrator } from "@/lib/orchestrator";
 import {
@@ -51,6 +52,7 @@ export function BorrowContent({
   const [isQuoting, setIsQuoting] = useState(false);
   const [isSubmiting, setIsSubmiting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [initiatorUtxoProof, setInitiatorUtxoProof] = useState<number[]>();
 
   const { paymentAddress, address, signPsbt } = useLaserEyes();
   const [coin, coinReserved, btcReserved] = useMemo(() => {
@@ -89,6 +91,27 @@ export function BorrowContent({
   );
 
   const coinBalance = useCoinBalance(coin);
+
+  useEffect(() => {
+    if (!toSpendUtxos.length || !paymentAddress) {
+      setInitiatorUtxoProof(undefined);
+      return;
+    }
+
+    const utxos = toSpendUtxos.filter(
+      (utxo) => utxo.address === paymentAddress
+    );
+
+    axios
+      .post(`/api/utxos/get-proof`, {
+        address: paymentAddress,
+        utxos,
+      })
+      .then((res) => res.data)
+      .then((data) => {
+        setInitiatorUtxoProof(data.data);
+      });
+  }, [toSpendUtxos, paymentAddress]);
 
   useEffect(() => {
     if (!Number(debouncedInputAmount)) {
@@ -442,7 +465,7 @@ export function BorrowContent({
   }, [borrowOffer, coin, debouncedInputAmount, pool, paymentAddress, address]);
 
   const onSubmit = async () => {
-    if (!psbt || !borrowOffer) {
+    if (!psbt || !borrowOffer || !initiatorUtxoProof) {
       return;
     }
     setIsSubmiting(true);
@@ -456,6 +479,7 @@ export function BorrowContent({
       }
 
       const txid = await Orchestrator.invoke({
+        initiator_utxo_proof: initiatorUtxoProof,
         intention_set: {
           tx_fee_in_sats: fee,
           initiator_address: paymentAddress,
