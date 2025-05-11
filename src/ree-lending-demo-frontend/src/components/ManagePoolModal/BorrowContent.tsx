@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLaserEyes } from "@omnisat/lasereyes";
 import { RuneId, Runestone, none, Edict } from "runelib";
 
+import { UTXO_PROOF_SERVER } from "@/lib/constants";
 import axios from "axios";
 import { useAddSpentUtxos } from "@/hooks/useSpentUtxos";
 import { Orchestrator } from "@/lib/orchestrator";
@@ -20,6 +21,8 @@ import {
   addressTypeToString,
   getAddressType,
   selectBtcUtxos,
+  hexToBytes,
+  reverseBuffer,
 } from "@/lib/utils";
 
 import { Input } from "@/components/ui/input";
@@ -103,9 +106,17 @@ export function BorrowContent({
     );
 
     axios
-      .post(`/api/utxos/get-proof`, {
-        address: paymentAddress,
-        utxos,
+      .post(`${UTXO_PROOF_SERVER}/get_proof`, {
+        network: "Testnet",
+        btc_address: paymentAddress,
+        utxos: utxos.map(({ height, txid, satoshis, vout }: UnspentOutput) => ({
+          outpoint: {
+            txid: Array.from(reverseBuffer(hexToBytes(txid))),
+            vout,
+          },
+          value: Number(satoshis),
+          height,
+        })),
       })
       .then((res) => res.data)
       .then((data) => {
