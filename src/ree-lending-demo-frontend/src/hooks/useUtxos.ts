@@ -126,6 +126,7 @@ export function useRuneUtxos(runeid: string | undefined) {
             scriptPk: utxo.scriptPk,
             txid: utxo.txid,
             vout: utxo.vout,
+            height: utxo.height,
             pubkey: publicKey,
             runes: utxo.runes.map((rune) => ({
               id: rune.runeid,
