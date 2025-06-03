@@ -39,7 +39,7 @@ pub fn get_pool_info(args: GetPoolInfoArgs) -> GetPoolInfoResponse {
             .map(|s| {
                 vec![CoinBalance {
                     id: p.meta.id,
-                    value: s.rune_supply() as u128,
+                    value: s.rune_supply(p.meta.id) as u128,
                 }]
             })
             .unwrap_or_default(),
@@ -230,8 +230,8 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
         action_params: _,
         pool_address,
         nonce,
-        pool_utxo_spend,
-        pool_utxo_receive,
+        pool_utxo_spent,
+        pool_utxo_received,
         input_coins,
         output_coins,
     } = intention;
@@ -248,8 +248,8 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
                 .validate_deposit(
                     txid,
                     nonce,
-                    pool_utxo_spend,
-                    pool_utxo_receive,
+                    pool_utxo_spent,
+                    pool_utxo_received,
                     input_coins,
                     output_coins,
                 )
@@ -259,7 +259,7 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
             if let Some(ref utxo) = consumed {
                 ree_pool_sign(
                     &mut psbt,
-                    utxo,
+                    vec![utxo],
                     crate::SCHNORR_KEY_NAME,
                     pool.derivation_path(),
                 )
@@ -282,8 +282,8 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
                 .validate_borrow(
                     txid,
                     nonce,
-                    pool_utxo_spend,
-                    pool_utxo_receive,
+                    pool_utxo_spent,
+                    pool_utxo_received,
                     input_coins,
                     output_coins,
                 )
@@ -292,7 +292,7 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
             // Sign the UTXO to be spent
             ree_pool_sign(
                 &mut psbt,
-                &consumed,
+                vec![&consumed],
                 crate::SCHNORR_KEY_NAME,
                 pool.derivation_path(),
             )

@@ -37,11 +37,11 @@ export interface Intention {
   'output_coins' : Array<OutputCoin>,
   'action' : string,
   'exchange_id' : string,
-  'pool_utxo_spend' : Array<string>,
+  'pool_utxo_spent' : Array<string>,
   'action_params' : string,
   'nonce' : bigint,
-  'pool_utxo_receive' : Array<string>,
   'pool_address' : string,
+  'pool_utxo_received' : Array<Utxo>,
 }
 export interface IntentionSet {
   'tx_fee_in_sats' : bigint,
@@ -88,7 +88,7 @@ export interface TxRecordInfo {
   'confirmed' : boolean,
 }
 export interface Utxo {
-  'maybe_rune' : [] | [CoinBalance],
+  'coins' : Array<CoinBalance>,
   'sats' : bigint,
   'txid' : string,
   'vout' : number,

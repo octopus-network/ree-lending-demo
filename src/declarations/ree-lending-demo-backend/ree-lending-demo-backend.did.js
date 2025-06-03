@@ -6,16 +6,22 @@ export const idlFactory = ({ IDL }) => {
   const CoinBalance = IDL.Record({ 'id' : IDL.Text, 'value' : IDL.Nat });
   const InputCoin = IDL.Record({ 'coin' : CoinBalance, 'from' : IDL.Text });
   const OutputCoin = IDL.Record({ 'to' : IDL.Text, 'coin' : CoinBalance });
+  const Utxo = IDL.Record({
+    'coins' : IDL.Vec(CoinBalance),
+    'sats' : IDL.Nat64,
+    'txid' : IDL.Text,
+    'vout' : IDL.Nat32,
+  });
   const Intention = IDL.Record({
     'input_coins' : IDL.Vec(InputCoin),
     'output_coins' : IDL.Vec(OutputCoin),
     'action' : IDL.Text,
     'exchange_id' : IDL.Text,
-    'pool_utxo_spend' : IDL.Vec(IDL.Text),
+    'pool_utxo_spent' : IDL.Vec(IDL.Text),
     'action_params' : IDL.Text,
     'nonce' : IDL.Nat64,
-    'pool_utxo_receive' : IDL.Vec(IDL.Text),
     'pool_address' : IDL.Text,
+    'pool_utxo_received' : IDL.Vec(Utxo),
   });
   const IntentionSet = IDL.Record({
     'tx_fee_in_sats' : IDL.Nat64,
@@ -35,12 +41,6 @@ export const idlFactory = ({ IDL }) => {
     'pool_address' : IDL.Text,
   });
   const GetPoolInfoArgs = IDL.Record({ 'pool_address' : IDL.Text });
-  const Utxo = IDL.Record({
-    'maybe_rune' : IDL.Opt(CoinBalance),
-    'sats' : IDL.Nat64,
-    'txid' : IDL.Text,
-    'vout' : IDL.Nat32,
-  });
   const PoolInfo = IDL.Record({
     'key' : IDL.Text,
     'name' : IDL.Text,

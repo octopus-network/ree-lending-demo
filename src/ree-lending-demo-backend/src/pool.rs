@@ -1,7 +1,7 @@
 use crate::ExchangeError;
 use candid::{CandidType, Deserialize};
 use ic_stable_structures::{Storable, storable::Bound};
-use ree_types::{CoinBalance, CoinId, InputCoin, OutputCoin, Pubkey, Txid, Utxo};
+use ree_types::{CoinBalance, CoinBalances, CoinId, InputCoin, OutputCoin, Pubkey, Txid, Utxo};
 use serde::Serialize;
 
 /// each tx's satoshis should be >= 10000
@@ -55,10 +55,10 @@ impl PoolState {
         self.utxo.as_ref().map(|utxo| utxo.sats).unwrap_or_default()
     }
 
-    pub fn rune_supply(&self) -> u128 {
+    pub fn rune_supply(&self, rune_id: CoinId) -> u128 {
         self.utxo
             .as_ref()
-            .map(|utxo| utxo.rune_amount())
+            .map(|utxo| utxo.coins.value_of(&rune_id))
             .unwrap_or_default()
     }
 }
@@ -111,8 +111,8 @@ impl Pool {
         &self,
         txid: Txid,
         nonce: u64,
-        pool_utxo_spend: Vec<String>,
-        pool_utxo_receive: Vec<String>,
+        pool_utxo_spent: Vec<String>,
+        pool_utxo_received: Vec<Utxo>,
         input_coins: Vec<InputCoin>,
         output_coins: Vec<OutputCoin>,
     ) -> Result<(PoolState, Option<Utxo>), ExchangeError> {
@@ -137,14 +137,14 @@ impl Pool {
             .ok_or(ExchangeError::PoolStateExpired(state.nonce))?;
         // Verify previous outpoint matches the current pool UTXO
         let pool_utxo = state.utxo.clone();
-        (pool_utxo.as_ref().map(|u| u.outpoint()).as_ref() == pool_utxo_spend.last())
+        (pool_utxo.as_ref().map(|u| u.outpoint()).as_ref() == pool_utxo_spent.last())
             .then(|| ())
             .ok_or(ExchangeError::InvalidSignPsbtArgs(
-                "pool_utxo_spend/pool state mismatch".to_string(),
+                "pool_utxo_spent/pool state mismatch".to_string(),
             ))?;
         // Verify new output exists in the transaction
-        let pool_new_outpoint = pool_utxo_receive.last().map(|s| s.clone()).ok_or(
-            ExchangeError::InvalidSignPsbtArgs("pool_utxo_receive not found".to_string()),
+        let pool_new_outpoint = pool_utxo_received.last().map(|s| s.clone()).ok_or(
+            ExchangeError::InvalidSignPsbtArgs("pool_utxo_received not found".to_string()),
         )?;
         // Verify deposit amount meets minimum requirement
         (btc_input.value >= MIN_BTC_VALUE as u128)
@@ -157,23 +157,21 @@ impl Pool {
             .map_err(|_| ExchangeError::Overflow)?;
         let (btc_pool, rune_pool) = pool_utxo
             .as_ref()
-            .map(|u| (u.sats, u.rune_amount()))
+            .map(|u| (u.sats, u.coins.value_of(&self.meta.id)))
             .unwrap_or((0u64, 0u128));
 
         let btc_output = btc_pool
             .checked_add(sats_input)
             .ok_or(ExchangeError::Overflow)?;
 
+        let mut coins = CoinBalances::new();
+        coins.add_coin(&CoinBalance {
+            value: rune_pool,
+            id: self.meta.id,
+        });
         // Create new UTXO with updated balance
-        let pool_output = Utxo::try_from(
-            pool_new_outpoint,
-            Some(CoinBalance {
-                value: rune_pool,
-                id: self.meta.id,
-            }),
-            btc_output,
-        )
-        .map_err(|_| ExchangeError::InvalidTxid)?;
+        let pool_output = Utxo::try_from(pool_new_outpoint.outpoint(), coins, btc_output)
+            .map_err(|_| ExchangeError::InvalidTxid)?;
 
         // Update the state with new UTXO, increment nonce, and set transaction ID
         state.utxo = Some(pool_output);
@@ -236,8 +234,8 @@ impl Pool {
         &self,
         txid: Txid,
         nonce: u64,
-        pool_utxo_spend: Vec<String>,
-        pool_utxo_receive: Vec<String>,
+        pool_utxo_spent: Vec<String>,
+        pool_utxo_received: Vec<Utxo>,
         input_coins: Vec<InputCoin>,
         output_coins: Vec<OutputCoin>,
     ) -> Result<(PoolState, Utxo), ExchangeError> {
@@ -261,15 +259,15 @@ impl Pool {
             .ok_or(ExchangeError::PoolStateExpired(state.nonce))?;
         // Verify previous outpoint exists and matches the current pool UTXO
         let prev_outpoint =
-            pool_utxo_spend
+            pool_utxo_spent
                 .last()
                 .map(|s| s.clone())
                 .ok_or(ExchangeError::InvalidSignPsbtArgs(
-                    "pool_utxo_spend not found".to_string(),
+                    "pool_utxo_spent not found".to_string(),
                 ))?;
         let prev_utxo = state.utxo.clone().ok_or(ExchangeError::EmptyPool)?;
         (prev_outpoint == prev_utxo.outpoint()).then(|| ()).ok_or(
-            ExchangeError::InvalidSignPsbtArgs("pool_utxo_spend/pool state mismatch".to_string()),
+            ExchangeError::InvalidSignPsbtArgs("pool_utxo_spent/pool state mismatch".to_string()),
         )?;
         // Calculate how much BTC can be borrowed and how much collateral is required
         let (runes, btc) = self.available_to_borrow(output.coin)?;
@@ -281,7 +279,10 @@ impl Pool {
         // Calculate the new pool balances after the borrow transaction
         let (btc_output, rune_output) = (
             prev_utxo.sats.checked_sub(output_btc),
-            prev_utxo.rune_amount().checked_add(runes.value),
+            prev_utxo
+                .coins
+                .value_of(&self.meta.id)
+                .checked_add(runes.value),
         );
 
         // Verify the output and input coins match what was calculated by available_to_borrow
@@ -302,17 +303,20 @@ impl Pool {
             rune_output.ok_or(ExchangeError::Overflow)?,
         );
 
+        let mut coins = CoinBalances::new();
+        coins.add_coin(&CoinBalance {
+            value: rune_output,
+            id: self.base_id(),
+        });
         // Create new UTXO with updated balance
         let pool_output = Utxo::try_from(
-            pool_utxo_receive
+            pool_utxo_received
                 .last()
                 .ok_or(ExchangeError::InvalidSignPsbtArgs(
-                    "pool_utxo_receive not found".to_string(),
-                ))?,
-            Some(CoinBalance {
-                id: self.base_id(),
-                value: rune_output,
-            }),
+                    "pool_utxo_received not found".to_string(),
+                ))?
+                .outpoint(),
+            coins,
             btc_output,
         )
         .map_err(|_| ExchangeError::InvalidTxid)?;
