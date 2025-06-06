@@ -151,6 +151,8 @@ export function DepositContent({
         parseCoinAmount(debouncedInputAmount, BITCOIN)
       );
 
+      console.log("depositOffer", depositOffer);
+
       const poolAddress = pool.address;
 
       const { output } = getP2trAressAndScript(pool.key);
@@ -166,13 +168,13 @@ export function DepositContent({
         addressType: AddressType.P2TR,
         runes: [
           {
-            id: poolUtxo0.maybe_rune[0].id,
-            amount: poolUtxo0.maybe_rune[0].value.toString(),
+            id: poolUtxo0.coins[0].id,
+            amount: poolUtxo0.coins[0].value.toString(),
           },
         ],
       };
 
-      let poolRuneAmount = poolUtxo0.maybe_rune[0].value,
+      let poolRuneAmount = poolUtxo0.coins[0].value,
         poolBtcAmount = poolUtxo0.sats;
 
       const _psbt = new bitcoin.Psbt({
@@ -384,8 +386,8 @@ export function DepositContent({
               action: "deposit",
               exchange_id: EXCHANGE_ID,
               input_coins: inputCoins,
-              pool_utxo_spend: poolSpendOutpoints,
-              pool_utxo_receive: poolReceiveOutpoints,
+              pool_utxo_spent: [],
+              pool_utxo_received: [],
               output_coins: [],
               pool_address: pool.address,
               action_params: "",

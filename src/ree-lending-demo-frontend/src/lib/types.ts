@@ -72,9 +72,9 @@ export type Intention = {
   action: string;
   exchange_id: string;
   action_params: string;
-  pool_utxo_spend: string[];
+  pool_utxo_spent: string[];
   nonce: bigint;
-  pool_utxo_receive: string[];
+  pool_utxo_received: string[];
   pool_address: string;
 };
 
@@ -113,7 +113,7 @@ export type DepositOffer = {
   nonce: bigint;
   pool_utxo: [
     {
-      maybe_rune: [CoinBalance];
+      coins: [CoinBalance];
       sats: bigint;
       txid: string;
       vout: number;
@@ -124,7 +124,7 @@ export type DepositOffer = {
 export type BorrowOffer = {
   nonce: bigint;
   pool_utxo: {
-    maybe_rune: [CoinBalance];
+    coins: [CoinBalance];
     sats: bigint;
     txid: string;
     vout: number;

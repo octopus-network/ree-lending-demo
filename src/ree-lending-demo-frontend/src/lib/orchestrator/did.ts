@@ -65,36 +65,11 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     pool_address: IDL.Text,
     pool_key: IDL.Text,
   });
-  const CoinBalance = IDL.Record({ id: IDL.Text, value: IDL.Nat });
-  const InputCoin = IDL.Record({ coin: CoinBalance, from: IDL.Text });
-  const OutputCoin = IDL.Record({ to: IDL.Text, coin: CoinBalance });
-  const Intention = IDL.Record({
-    input_coins: IDL.Vec(InputCoin),
-    output_coins: IDL.Vec(OutputCoin),
-    action: IDL.Text,
-    exchange_id: IDL.Text,
-    pool_utxo_spend: IDL.Vec(IDL.Text),
-    action_params: IDL.Text,
-    nonce: IDL.Nat64,
-    pool_utxo_receive: IDL.Vec(IDL.Text),
-    pool_address: IDL.Text,
-  });
-  const IntentionSet = IDL.Record({
-    tx_fee_in_sats: IDL.Nat64,
-    initiator_address: IDL.Text,
-    intentions: IDL.Vec(Intention),
-  });
-  const ExecuteTxArgs = IDL.Record({
-    zero_confirmed_tx_queue_length: IDL.Nat32,
-    txid: IDL.Text,
-    intention_set: IntentionSet,
-    intention_index: IDL.Nat32,
-    psbt_hex: IDL.Text,
-  });
   const GetFailedInvokeLogArgs = IDL.Variant({
     All: IDL.Null,
     ByTxid: IDL.Text,
     ByAddress: IDL.Text,
+    BySecondsPassed: IDL.Nat64,
   });
   const Result_3 = IDL.Variant({ Ok: IDL.Text, Err: IDL.Text });
   const ExecutionStepLogView = IDL.Record({
@@ -116,11 +91,6 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     processing_result: Result_3,
     broadcasted_time: IDL.Opt(IDL.Text),
   });
-  const InvokeArgs = IDL.Record({
-    intention_set: IntentionSet,
-    initiator_utxo_proof: IDL.Vec(IDL.Nat8),
-    psbt_hex: IDL.Text,
-  });
   const BlockBasic = IDL.Record({
     block_hash: IDL.Text,
     block_height: IDL.Nat32,
@@ -139,9 +109,8 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
   const ExchangeView = IDL.Record({
     status: ExchangeStatus,
     exchange_id: IDL.Text,
-    name: IDL.Text,
     canister_id: IDL.Principal,
-    description: IDL.Text,
+    client_canisters: IDL.Vec(IDL.Principal),
   });
   const RejectedTxView = IDL.Record({
     rollback_results: IDL.Vec(IDL.Text),
@@ -155,6 +124,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     testnet: IDL.Null,
   });
   const OrchestratorSettings = IDL.Record({
+    exchange_registry_principal: IDL.Principal,
     max_input_count_of_psbt: IDL.Nat32,
     min_tx_confirmations: IDL.Nat32,
     mempool_connector_principal: IDL.Principal,
@@ -171,11 +141,17 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     update_time: IDL.Text,
     medium: IDL.Nat64,
   });
+  const UtxoProofVerificationStatus = IDL.Variant({
+    Enabled: IDL.Null,
+    Disabled: IDL.Null,
+    AllowEmpty: IDL.Null,
+  });
   const OrchestratorStatus = IDL.Record({
     last_block: IDL.Opt(BlockBasic),
     pending_tx_count: IDL.Nat64,
     mempool_tx_fee_rate: MempoolTxFeeRateView,
     invoke_paused: IDL.Bool,
+    utxo_proof_verification_status: UtxoProofVerificationStatus,
   });
   const TxStatus = IDL.Variant({
     Confirmed: IDL.Nat32,
@@ -188,11 +164,41 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     included_block: IDL.Opt(BlockBasic),
     sent_tx_hex: IDL.Text,
   });
+  const CoinBalance = IDL.Record({ id: IDL.Text, value: IDL.Nat });
   const OutpointWithValue = IDL.Record({
     maybe_rune: IDL.Opt(CoinBalance),
     value: IDL.Nat64,
     script_pubkey_hex: IDL.Text,
     outpoint: IDL.Text,
+  });
+  const InputCoin = IDL.Record({ coin: CoinBalance, from: IDL.Text });
+  const OutputCoin = IDL.Record({ to: IDL.Text, coin: CoinBalance });
+  const Utxo = IDL.Record({
+    coins: IDL.Vec(CoinBalance),
+    sats: IDL.Nat64,
+    txid: IDL.Text,
+    vout: IDL.Nat32,
+  });
+  const Intention = IDL.Record({
+    input_coins: IDL.Vec(InputCoin),
+    output_coins: IDL.Vec(OutputCoin),
+    action: IDL.Text,
+    exchange_id: IDL.Text,
+    pool_utxo_spent: IDL.Vec(IDL.Text),
+    action_params: IDL.Text,
+    nonce: IDL.Nat64,
+    pool_address: IDL.Text,
+    pool_utxo_received: IDL.Vec(Utxo),
+  });
+  const IntentionSet = IDL.Record({
+    tx_fee_in_sats: IDL.Nat64,
+    initiator_address: IDL.Text,
+    intentions: IDL.Vec(Intention),
+  });
+  const InvokeArgs = IDL.Record({
+    intention_set: IntentionSet,
+    initiator_utxo_proof: IDL.Vec(IDL.Nat8),
+    psbt_hex: IDL.Text,
   });
   const NewBlockDetectedArgs = IDL.Record({
     block_hash: IDL.Text,
@@ -201,11 +207,10 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     block_height: IDL.Nat32,
   });
   const Result_4 = IDL.Variant({ Ok: IDL.Vec(IDL.Text), Err: IDL.Text });
-  const ExchangeMetadata = IDL.Record({
-    principal: IDL.Principal,
+  const RegisterExchangeArgs = IDL.Record({
+    exchange_canister: IDL.Principal,
     exchange_id: IDL.Text,
-    name: IDL.Text,
-    description: IDL.Text,
+    client_canisters: IDL.Vec(IDL.Principal),
   });
   const SaveIncludedBlockForTxArgs = IDL.Record({
     txid: IDL.Text,
@@ -230,19 +235,9 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
     ),
     get_canister_info: IDL.Func([IDL.Nat64], [Result_2], []),
     get_exchange_pools: IDL.Func([], [IDL.Vec(ExchangePool)], ["query"]),
-    get_execute_tx_args_of_failed_invoke: IDL.Func(
-      [IDL.Text, IDL.Nat64],
-      [IDL.Opt(ExecuteTxArgs)],
-      ["query"]
-    ),
     get_failed_invoke_logs: IDL.Func(
       [GetFailedInvokeLogArgs],
       [IDL.Vec(IDL.Tuple(IDL.Text, InvokeLogView))],
-      ["query"]
-    ),
-    get_invoke_args_of_failed_invoke: IDL.Func(
-      [IDL.Text],
-      [IDL.Opt(InvokeArgs)],
       ["query"]
     ),
     get_last_sent_txs: IDL.Func(
@@ -301,10 +296,7 @@ export const idlFactory = ({ IDL }: { IDL: any }) => {
       [Result_4],
       []
     ),
-    register_exchange: IDL.Func([ExchangeMetadata], [Result], []),
-    reject_tx: IDL.Func([IDL.Text, IDL.Text], [Result], []),
-    rollback_tx: IDL.Func([IDL.Text], [Result_4], []),
-    rollback_tx_in_exchange: IDL.Func([IDL.Text, IDL.Text], [Result], []),
+    register_exchange: IDL.Func([RegisterExchangeArgs], [Result], []),
     save_included_block_for_tx: IDL.Func(
       [SaveIncludedBlockForTxArgs],
       [Result],
