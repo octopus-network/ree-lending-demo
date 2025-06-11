@@ -121,6 +121,9 @@ export function BorrowContent({
       .then((res) => res.data)
       .then((data) => {
         setInitiatorUtxoProof(data.Ok);
+      })
+      .catch((err) => {
+        setInitiatorUtxoProof([]);
       });
   }, [toSpendUtxos, paymentAddress]);
 
