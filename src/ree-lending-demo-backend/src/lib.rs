@@ -20,6 +20,7 @@ use ree_types::{
     },
 };
 use std::cell::RefCell;
+use std::collections::HashSet;
 use thiserror::Error;
 
 const SCHNORR_KEY_NAME: &str = "key_1";
@@ -76,6 +77,8 @@ thread_local! {
           MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2))),
       )
   );
+
+  pub static EXECUTING_POOLS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
 }
 
 pub(crate) fn get_pools() -> Vec<Pool> {
@@ -84,6 +87,29 @@ pub(crate) fn get_pools() -> Vec<Pool> {
 
 pub(crate) fn get_pool(addr: &String) -> Option<Pool> {
     LENDING_POOLS.with_borrow(|p| p.get(addr))
+}
+
+#[must_use]
+pub struct ExecuteTxGuard(String);
+
+impl ExecuteTxGuard {
+    pub fn new(pool_address: String) -> Option<Self> {
+        EXECUTING_POOLS.with(|executing_pools| {
+            if executing_pools.borrow().contains(&pool_address) {
+                return None;
+            }
+            executing_pools.borrow_mut().insert(pool_address.clone());
+            return Some(ExecuteTxGuard(pool_address));
+        })
+    }
+}
+
+impl Drop for ExecuteTxGuard {
+    fn drop(&mut self) {
+        EXECUTING_POOLS.with_borrow_mut(|executing_pools| {
+            executing_pools.remove(&self.0);
+        });
+    }
 }
 
 ic_cdk::export_candid!();

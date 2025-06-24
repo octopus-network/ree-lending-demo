@@ -1,3 +1,4 @@
+use crate::ExecuteTxGuard;
 use crate::pool;
 use ic_cdk::api::management_canister::bitcoin::BitcoinNetwork;
 use ic_cdk_macros::{query, update};
@@ -235,6 +236,9 @@ pub async fn execute_tx(args: ExecuteTxArgs) -> ExecuteTxResponse {
         input_coins,
         output_coins,
     } = intention;
+
+    let _guard = ExecuteTxGuard::new(pool_address.clone())
+        .ok_or(format!("Pool {0} Executing", pool_address).to_string())?;
 
     // Get the pool from storage
     let pool = crate::LENDING_POOLS
