@@ -1,7 +1,10 @@
 use crate::ExchangeError;
 use candid::{CandidType, Deserialize};
 use ic_stable_structures::{Storable, storable::Bound};
-use ree_types::{CoinBalance, CoinBalances, CoinId, InputCoin, OutputCoin, Pubkey, Txid, Utxo};
+use ree_exchange_sdk::exchange_interfaces::{PoolBasic, PoolInfo, ReePool};
+use ree_exchange_sdk::{
+    CoinBalance, CoinBalances, CoinId, InputCoin, OutputCoin, Pubkey, Txid, Utxo,
+};
 use serde::Serialize;
 
 /// each tx's satoshis should be >= 10000
@@ -329,14 +332,60 @@ impl Pool {
         Ok((state, prev_utxo))
     }
 
+    // Adds a new PoolState to the chain after a transaction is executed
+    pub(crate) fn commit(&mut self, state: PoolState) {
+        self.states.push(state);
+    }
+}
+
+impl ReePool for Pool {
+    fn get_pool_info(&self) -> PoolInfo {
+        let p = self;
+
+        PoolInfo {
+            key: p.pubkey.clone(),
+            name: p.meta.symbol.clone(),
+            key_derivation_path: vec![p.meta.id.to_bytes()],
+            address: p.addr.clone(),
+            nonce: p.states.last().map(|s| s.nonce).unwrap_or_default(),
+            btc_reserved: p.states.last().map(|s| s.btc_supply()).unwrap_or_default(),
+            coin_reserved: p
+                .states
+                .last()
+                .map(|s| {
+                    vec![CoinBalance {
+                        id: p.meta.id,
+                        value: s.rune_supply(p.meta.id) as u128,
+                    }]
+                })
+                .unwrap_or_default(),
+            utxos: p
+                .states
+                .last()
+                .and_then(|s| s.utxo.clone())
+                .map(|utxo| vec![utxo])
+                .unwrap_or_default(),
+            attributes: p.attrs(),
+        }
+    }
+
+    fn get_basic_info(&self) -> PoolBasic {
+        let p = self;
+
+        PoolBasic {
+            name: p.meta.symbol.clone(),
+            address: p.addr.clone(),
+        }
+    }
+
     // Rollback the pool state to before the specified transaction
     // Removes the state created by txid and all subsequent states
-    pub(crate) fn rollback(&mut self, txid: Txid) -> Result<(), ExchangeError> {
+    fn rollback(&mut self, txid: Txid) -> Result<(), String> {
         let idx = self
             .states
             .iter()
             .position(|state| state.id == Some(txid))
-            .ok_or(ExchangeError::InvalidState("txid not found".to_string()))?;
+            .ok_or("txid not found when rollback".to_string())?;
         if idx == 0 {
             self.states.clear();
             return Ok(());
@@ -347,22 +396,17 @@ impl Pool {
 
     // Finalize a transaction by making its state the new base state
     // Removes all states before the specified transaction
-    pub(crate) fn finalize(&mut self, txid: Txid) -> Result<(), ExchangeError> {
+    fn finalize(&mut self, txid: Txid) -> Result<(), String> {
         let idx = self
             .states
             .iter()
             .position(|state| state.id == Some(txid))
-            .ok_or(ExchangeError::InvalidState("txid not found".to_string()))?;
+            .ok_or("txid not found when finalize".to_string())?;
         if idx == 0 {
             return Ok(());
         }
         self.states.rotate_left(idx);
         self.states.truncate(self.states.len() - idx);
         Ok(())
-    }
-
-    // Adds a new PoolState to the chain after a transaction is executed
-    pub(crate) fn commit(&mut self, state: PoolState) {
-        self.states.push(state);
     }
 }

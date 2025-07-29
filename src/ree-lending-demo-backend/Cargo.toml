@@ -17,5 +17,5 @@ serde = { version = "1.0", features = ["derive"] }
 hex = "0.4"
 ic-stable-structures = "0.6"
 ciborium = "0.2"
-ree-types = { git =  "https://github.com/octopus-network/ree-types.git", rev = "3d0fb503384082bdeaf368305c4229801ee9ebd3" }
+ree-exchange-sdk = { git = "https://github.com/octopus-network/ree-types.git", branch = "framework", package = "ree-exchange-sdk" }
 serde_json = "1.0"
