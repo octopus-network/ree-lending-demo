@@ -1,17 +1,13 @@
-use crate::pool::Pool;
+use crate::pool::PoolState;
 use crate::{ExchangeError, pool::CoinMeta};
 use candid::{CandidType, Deserialize};
 use ic_cdk_macros::{query, update};
-use ree_exchange_sdk::exchange_interfaces::PoolStorage;
-use ree_exchange_sdk::{
-    CoinBalance, CoinId, Utxo, bitcoin::Network, schnorr::request_ree_pool_address,
-};
-use ree_exchange_sdk::{
-    Intention, bitcoin::psbt::Psbt, exchange_interfaces::*, psbt::ree_pool_sign,
-};
+use ree_exchange_sdk::prelude::Metadata;
+use ree_exchange_sdk::prelude::*;
+use ree_exchange_sdk::schnorr::sign_p2tr_in_psbt;
+use ree_exchange_sdk::types::bitcoin::psbt::Psbt;
+use ree_exchange_sdk::types::{CoinBalance, Txid, Utxo, exchange_interfaces::NewBlockInfo};
 use serde::Serialize;
-
-use ree_exchange_sdk::{commit, exchange, pools};
 
 // DepositOffer contains the return information for pre_deposit
 #[derive(Eq, PartialEq, CandidType, Clone, Debug, Deserialize, Serialize)]
@@ -30,8 +26,8 @@ pub fn pre_deposit(
     if amount.value < CoinMeta::btc().min_amount {
         return Err(ExchangeError::TooSmallFunds);
     }
-    let pool = exchange::LendingPools::pool(&pool_address).ok_or(ExchangeError::InvalidPool)?;
-    let state = pool.states.last().clone();
+    let pool = exchange::LendingPools::get(&pool_address).ok_or(ExchangeError::InvalidPool)?;
+    let state = pool.states().last().clone();
     Ok(DepositOffer {
         pool_utxo: state.map(|s| s.utxo.clone()).flatten(),
         nonce: state.map(|s| s.nonce).unwrap_or_default(),
@@ -51,9 +47,9 @@ pub struct BorrowOffer {
 // pre_borrow queries the information needed to build a borrow transaction
 // by specifying the target pool address and the amount requested to borrow
 pub fn pre_borrow(pool_address: String, amount: CoinBalance) -> Result<BorrowOffer, ExchangeError> {
-    let pool = exchange::LendingPools::pool(&pool_address).ok_or(ExchangeError::InvalidPool)?;
-    let recent_state = pool.states.last().ok_or(ExchangeError::EmptyPool)?;
-    let (input_runes, output_btc) = pool.available_to_borrow(amount)?;
+    let pool = exchange::LendingPools::get(&pool_address).ok_or(ExchangeError::InvalidPool)?;
+    let recent_state = pool.states().last().ok_or(ExchangeError::EmptyPool)?;
+    let (input_runes, output_btc) = crate::pool::available_to_borrow(&pool, amount)?;
     Ok(BorrowOffer {
         nonce: recent_state.nonce,
         pool_utxo: recent_state.utxo.clone().expect("already checked"),
@@ -63,49 +59,25 @@ pub fn pre_borrow(pool_address: String, amount: CoinBalance) -> Result<BorrowOff
 }
 
 #[update]
-async fn reset_blocks() -> Result<(), String> {
-    let caller = ic_cdk::api::caller();
-    if !ic_cdk::api::is_controller(&caller) {
-        return Err("Not authorized".to_string());
-    }
-    exchange::reset_blocks()
-}
-
-#[update]
 // init_pool creates a demonstration lending pool when the exchange is deployed
 // This pool allows users to borrow BTC satoshis at a 1:1 ratio by depositing RICH tokens as collateral
 async fn init_pool() -> Result<(), String> {
-    let caller = ic_cdk::api::caller();
+    let caller = ic_cdk::api::msg_caller();
     if !ic_cdk::api::is_controller(&caller) {
         return Err("Not authorized".to_string());
     }
 
-    let id = CoinId::rune(72798, 1058);
-    let meta = CoinMeta {
-        id,
-        symbol: "HOPE•YOU•GET•RICH".to_string(),
-        min_amount: 1,
-    };
-
-    // Request a pool address from the REE system
-    let (untweaked, tweaked, addr) = request_ree_pool_address(
-        crate::SCHNORR_KEY_NAME,
-        vec![id.to_string().as_bytes().to_vec()],
-        Network::Testnet4,
+    let metadata = Metadata::generate_new::<exchange::LendingPools>(
+        "HOPE•YOU•GET•RICH".to_string(),
+        "72798:1058".to_string(),
     )
-    .await?;
+    .await
+    .expect("Failed to call chain-key API");
 
-    // Initialize the pool with empty state
-    let pool = crate::Pool {
-        meta,
-        pubkey: untweaked.clone(),
-        tweaked,
-        addr: addr.to_string(),
-        states: vec![],
-    };
+    let pool = Pool::new(metadata);
 
     // Store the pool in the storage
-    exchange::LendingPools::put(addr.to_string(), pool);
+    exchange::LendingPools::insert(pool);
     Ok(())
 }
 
@@ -117,141 +89,122 @@ pub mod exchange {
     pub struct LendingPools;
 
     impl Pools for LendingPools {
-        type Pool = Pool;
+        type State = PoolState;
 
-        fn network() -> ree_exchange_sdk::exchange_interfaces::Network {
-            ree_exchange_sdk::exchange_interfaces::Network::Testnet4
+        const BLOCK_MEMORY: u8 = 0;
+
+        const TRANSACTION_MEMORY: u8 = 1;
+
+        const POOL_MEMORY: u8 = 2;
+
+        fn network() -> ree_exchange_sdk::Network {
+            ree_exchange_sdk::Network::Testnet4
+        }
+
+        // This is optional
+        fn finalize_threshold() -> u32 {
+            64
         }
     }
 
-    pub fn reset_blocks() -> Result<(), String> {
-        __BLOCKS.with_borrow_mut(|b| {
-            b.clear_new();
-        });
-        Ok(())
+    #[hook]
+    impl Hook for LendingPools {
+        fn pre_new_block(args: NewBlockInfo) {
+            ic_cdk::println!("!!! pre_new_block: {}", args.block_height);
+        }
+
+        fn on_tx_rollbacked<S>(
+            address: String,
+            txid: Txid,
+            reason: String,
+            _rollbacked_states: Vec<S>,
+        ) {
+            ic_cdk::println!("!!! on_tx_rollbacked: {}, {}, {}", address, txid, reason);
+        }
+
+        fn on_tx_confirmed(address: String, txid: Txid, block: Block) {
+            ic_cdk::println!(
+                "!!! on_tx_confirmed: {}, {}, {}",
+                address,
+                txid,
+                block.height
+            );
+        }
+
+        fn on_tx_finalized(address: String, txid: Txid, block: Block) {
+            ic_cdk::println!(
+                "!!! on_tx_finalized: {}, {}, {}",
+                address,
+                txid,
+                block.height
+            );
+        }
+
+        fn post_new_block(args: NewBlockInfo) {
+            ic_cdk::println!("!!! post_new_block: {}", args.block_height);
+        }
     }
 
-    #[commit]
-    pub async fn deposit(args: ExecuteTxArgs) -> ExecuteTxResponse {
-        let ExecuteTxArgs {
-            psbt_hex,
-            txid,
-            intention_set,
-            intention_index,
-            zero_confirmed_tx_queue_length: _zero_confirmed_tx_queue_length,
-        } = args;
-        // Decode and deserialize the PSBT
-        let raw = hex::decode(&psbt_hex).map_err(|_| "invalid psbt".to_string())?;
-        let mut psbt = Psbt::deserialize(raw.as_slice()).map_err(|_| "invalid psbt".to_string())?;
-
-        // Extract the intention details
-        let intention = intention_set.intentions[intention_index as usize].clone();
-        let Intention {
-            exchange_id: _,
-            action: _,
-            action_params: _,
-            pool_address,
-            nonce,
-            pool_utxo_spent,
-            pool_utxo_received,
-            input_coins,
-            output_coins,
-        } = intention;
-
+    #[action]
+    pub async fn deposit(psbt: &mut Psbt, args: ActionArgs) -> ActionResult<PoolState> {
         // Get the pool from storage
-        let mut pool =
-            exchange::LendingPools::pool(&pool_address).expect("already checked in pre_*; qed");
+        let pool = exchange::LendingPools::get(&args.intention.pool_address)
+            .expect("already checked in pre_*; qed");
 
         // Validate the deposit transaction and get the new pool state
-        let (new_state, consumed) = pool
-            .validate_deposit(
-                txid,
-                nonce,
-                pool_utxo_spent,
-                pool_utxo_received,
-                input_coins,
-                output_coins,
-            )
-            .map_err(|e| e.to_string())?;
+        let (new_state, consumed) = crate::pool::validate_deposit(
+            &pool,
+            args.txid,
+            args.intention.nonce,
+            args.intention.pool_utxo_spent,
+            args.intention.pool_utxo_received,
+            args.intention.input_coins,
+            args.intention.output_coins,
+        )
+        .map_err(|e| e.to_string())?;
 
         // Sign the UTXO if there's an existing one to spend
         if let Some(ref utxo) = consumed {
-            ree_pool_sign(
-                &mut psbt,
-                vec![utxo],
-                crate::SCHNORR_KEY_NAME,
-                pool.derivation_path(),
+            sign_p2tr_in_psbt(
+                psbt,
+                &[utxo.clone()],
+                ree_exchange_sdk::Network::Testnet4,
+                pool.metadata().key_derivation_path.clone(),
             )
             .await
             .map_err(|e| e.to_string())?;
         }
-
-        // Update the pool with the new state
-        pool.commit(new_state);
-        exchange::LendingPools::put(pool_address.clone(), pool);
-
-        // Return the serialized PSBT with the exchange's signatures
-        Ok(psbt.serialize_hex())
+        Ok(new_state)
     }
 
-    #[commit]
-    pub async fn borrow(args: ExecuteTxArgs) -> ExecuteTxResponse {
-        let ExecuteTxArgs {
-            psbt_hex,
-            txid,
-            intention_set,
-            intention_index,
-            zero_confirmed_tx_queue_length: _zero_confirmed_tx_queue_length,
-        } = args;
-        // Decode and deserialize the PSBT
-        let raw = hex::decode(&psbt_hex).map_err(|_| "invalid psbt".to_string())?;
-        let mut psbt = Psbt::deserialize(raw.as_slice()).map_err(|_| "invalid psbt".to_string())?;
-
-        // Extract the intention details
-        let intention = intention_set.intentions[intention_index as usize].clone();
-        let Intention {
-            exchange_id: _,
-            action: _,
-            action_params: _,
-            pool_address,
-            nonce,
-            pool_utxo_spent,
-            pool_utxo_received,
-            input_coins,
-            output_coins,
-        } = intention;
-
+    #[action]
+    pub async fn borrow(psbt: &mut Psbt, args: ActionArgs) -> ActionResult<PoolState> {
         // Get the pool from storage
-        let mut pool =
-            exchange::LendingPools::pool(&pool_address).expect("already checked in pre_*; qed");
+        let pool = exchange::LendingPools::get(&args.intention.pool_address)
+            .expect("already checked in pre_*; qed");
 
         // Validate the borrow transaction and get the new pool state
-        let (new_state, consumed) = pool
-            .validate_borrow(
-                txid,
-                nonce,
-                pool_utxo_spent,
-                pool_utxo_received,
-                input_coins,
-                output_coins,
-            )
-            .map_err(|e| e.to_string())?;
+        let (new_state, consumed) = crate::pool::validate_borrow(
+            &pool,
+            args.txid,
+            args.intention.nonce,
+            args.intention.pool_utxo_spent,
+            args.intention.pool_utxo_received,
+            args.intention.input_coins,
+            args.intention.output_coins,
+        )
+        .map_err(|e| e.to_string())?;
 
         // Sign the UTXO to be spent
-        ree_pool_sign(
-            &mut psbt,
-            vec![&consumed],
-            crate::SCHNORR_KEY_NAME,
-            pool.derivation_path(),
+        sign_p2tr_in_psbt(
+            psbt,
+            &[consumed.clone()],
+            ree_exchange_sdk::Network::Testnet4,
+            pool.metadata().key_derivation_path.clone(),
         )
         .await
         .map_err(|e| e.to_string())?;
 
-        // Update the pool with the new state
-        pool.commit(new_state);
-        exchange::LendingPools::put(pool_address.clone(), pool);
-
-        // Return the serialized PSBT with the exchange's signatures
-        Ok(psbt.serialize_hex())
+        Ok(new_state)
     }
 }

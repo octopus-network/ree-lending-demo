@@ -1,4 +1,3 @@
-type BlockInfo = record { height : nat32; hash : text };
 type BorrowOffer = record {
   pool_utxo : Utxo;
   nonce : nat64;
@@ -23,10 +22,6 @@ type ExecuteTxArgs = record {
   intention_set : IntentionSet;
   intention_index : nat32;
   psbt_hex : text;
-};
-type GetMinimalTxValueArgs = record {
-  zero_confirmed_tx_queue_length : nat32;
-  pool_address : text;
 };
 type GetPoolInfoArgs = record { pool_address : text };
 type InputCoin = record { coin : CoinBalance; from : text };
@@ -65,19 +60,11 @@ type PoolInfo = record {
   nonce : nat64;
   utxos : vec Utxo;
 };
-type Result = variant { Ok : record { nat64; nat64 }; Err : text };
-type Result_1 = variant { Ok : text; Err : text };
-type Result_2 = variant { Ok; Err : text };
-type Result_3 = variant { Ok : BorrowOffer; Err : ExchangeError };
-type Result_4 = variant { Ok : DepositOffer; Err : ExchangeError };
-type Result_5 = variant { Ok : vec BlockInfo; Err : text };
-type Result_6 = variant { Ok : vec TxRecordInfo; Err : text };
-type RollbackTxArgs = record { txid : text };
-type TxRecordInfo = record {
-  records : vec text;
-  txid : text;
-  confirmed : bool;
-};
+type Result = variant { Ok : text; Err : text };
+type Result_1 = variant { Ok; Err : text };
+type Result_2 = variant { Ok : BorrowOffer; Err : ExchangeError };
+type Result_3 = variant { Ok : DepositOffer; Err : ExchangeError };
+type RollbackTxArgs = record { txid : text; reason_code : text };
 type Utxo = record {
   coins : vec CoinBalance;
   sats : nat64;
@@ -85,18 +72,12 @@ type Utxo = record {
   vout : nat32;
 };
 service : {
-  blocks_tx_records_count : () -> (Result) query;
-  execute_tx : (ExecuteTxArgs) -> (Result_1);
-  get_minimal_tx_value : (GetMinimalTxValueArgs) -> (nat64) query;
+  execute_tx : (ExecuteTxArgs) -> (Result);
   get_pool_info : (GetPoolInfoArgs) -> (opt PoolInfo) query;
   get_pool_list : () -> (vec PoolBasic) query;
-  init_pool : () -> (Result_2);
-  new_block : (NewBlockInfo) -> (Result_2);
-  pre_borrow : (text, CoinBalance) -> (Result_3) query;
-  pre_deposit : (text, CoinBalance) -> (Result_4) query;
-  query_blocks : () -> (Result_5) query;
-  query_tx_records : () -> (Result_6) query;
-  reset_blocks : () -> (Result_2);
-  reset_tx_records : () -> (Result_2);
-  rollback_tx : (RollbackTxArgs) -> (Result_2);
+  init_pool : () -> (Result_1);
+  new_block : (NewBlockInfo) -> (Result_1);
+  pre_borrow : (text, CoinBalance) -> (Result_2) query;
+  pre_deposit : (text, CoinBalance) -> (Result_3) query;
+  rollback_tx : (RollbackTxArgs) -> (Result_1);
 }

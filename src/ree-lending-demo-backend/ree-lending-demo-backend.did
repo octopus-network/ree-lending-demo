@@ -64,7 +64,7 @@ type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok; Err : text };
 type Result_2 = variant { Ok : BorrowOffer; Err : ExchangeError };
 type Result_3 = variant { Ok : DepositOffer; Err : ExchangeError };
-type RollbackTxArgs = record { txid : text };
+type RollbackTxArgs = record { txid : text; reason_code : text };
 type Utxo = record {
   coins : vec CoinBalance;
   sats : nat64;
