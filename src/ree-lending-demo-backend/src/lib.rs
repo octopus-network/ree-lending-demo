@@ -2,12 +2,9 @@ mod lending;
 mod pool;
 
 use crate::lending::{BorrowOffer, DepositOffer};
-use crate::pool::Pool;
 use candid::CandidType;
-use ree_exchange_sdk::CoinBalance;
+use ree_exchange_sdk::types::CoinBalance;
 use thiserror::Error;
-
-const SCHNORR_KEY_NAME: &str = "key_1";
 
 #[derive(Debug, Error, CandidType)]
 pub enum ExchangeError {
