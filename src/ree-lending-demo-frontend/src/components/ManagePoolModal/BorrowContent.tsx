@@ -493,7 +493,7 @@ export function BorrowContent({
       }
 
       const txid = await Orchestrator.invoke({
-        initiator_utxo_proof: initiatorUtxoProof,
+        initiator_utxo_proof: [],
         intention_set: {
           tx_fee_in_sats: fee,
           initiator_address: paymentAddress,
