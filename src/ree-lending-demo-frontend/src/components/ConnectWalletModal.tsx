@@ -5,7 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Info, Loader2 } from "lucide-react";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { WALLETS } from "@/lib/constants";
 import {
   useLaserEyes,
@@ -16,6 +16,7 @@ import {
 } from "@omnisat/lasereyes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useRee } from "@omnity/ree-ts-sdk";
 
 function WalletRow({
   wallet,
@@ -66,7 +67,7 @@ function WalletRow({
 
   const onConnectWallet = useCallback(async () => {
     if (!installed) {
-      window.open(WALLETS[wallet].url, "_blank");
+      window.open(WALLETS[wallet]?.url, "_blank");
       return;
     }
     setConnectingWallet(wallet);
@@ -98,16 +99,16 @@ function WalletRow({
             <Loader2 className="size-6 animate-spin text-primary" />
           ) : (
             <img
-              src={WALLETS[wallet].icon}
+              src={WALLETS[wallet]?.icon}
               className="size-8 rounded-lg"
-              alt={WALLETS[wallet].name}
+              alt={WALLETS[wallet]?.name}
               width={64}
               height={64}
             />
           )}
         </div>
         <span className="font-semibold text-lg ml-2">
-          {WALLETS[wallet].name}
+          {WALLETS[wallet]?.name}
         </span>
       </div>
       {installed && (
@@ -124,10 +125,22 @@ export function ConnectWalletModal({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) {
+  const { updateWallet } = useRee();
+  const { address, paymentAddress } = useLaserEyes();
+
+  useEffect(() => {
+    updateWallet({
+      address,
+      paymentAddress,
+    });
+  }, [address, paymentAddress]);
+
   const onConnected = (wallet: string) => {
-    toast(`Connected with ${WALLETS[wallet].name}`);
+    toast(`Connected with ${WALLETS[wallet]?.name}`);
+
     setOpen(false);
   };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>

@@ -43,12 +43,10 @@ export interface Pool {
   address: string;
   name: string;
   btc_reserved: bigint;
-  coin_reserved: [
-    {
-      id: string;
-      value: bigint;
-    }
-  ];
+  coin_reserved: {
+    id: string;
+    value: bigint;
+  }[];
 }
 
 export type CoinBalance = {

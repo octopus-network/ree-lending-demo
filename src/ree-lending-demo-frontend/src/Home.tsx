@@ -1,67 +1,13 @@
-import { useState, useEffect } from "react";
-import { actor as lendingActor } from "@/lib/exchange/actor";
-import { Pool } from "@/lib/types";
 import { Loader2 } from "lucide-react";
-import { usePendingBtcUtxos, usePendingRuneUtxos } from "./hooks/useUtxos";
-import { Orchestrator } from "./lib/orchestrator";
+
 import { PoolRow } from "./components/PoolRow";
-import { useLaserEyes } from "@omnisat/lasereyes";
+
+import { usePoolList } from "@omnity/ree-ts-sdk";
 
 export default function Home() {
-  const [poolList, setPoolList] = useState<Pool[]>();
-  const [timer, setTimer] = useState<number>();
-  const { address, paymentAddress, publicKey, paymentPublicKey } =
-    useLaserEyes();
+  const { pools: poolList, error } = usePoolList();
 
-  const [, setPendingBtcUtxos] = usePendingBtcUtxos();
-  const [, setPendingRuneUtxos] = usePendingRuneUtxos();
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimer(new Date().getTime());
-    }, 10 * 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (address && publicKey) {
-      Orchestrator.getUnconfirmedUtxos(address, publicKey).then((_utxos) => {
-        setPendingRuneUtxos([]);
-      });
-    }
-  }, [address, publicKey, setPendingRuneUtxos, timer]);
-
-  useEffect(() => {
-    if (paymentAddress && paymentPublicKey) {
-      Orchestrator.getUnconfirmedUtxos(paymentAddress, paymentPublicKey).then(
-        (_utxos) => {
-          setPendingBtcUtxos([]);
-        }
-      );
-    }
-  }, [paymentAddress, paymentPublicKey, setPendingBtcUtxos, timer]);
-
-  useEffect(() => {
-    lendingActor
-      .get_pool_list()
-      .then((res: any) => {
-        const poolAddresses = res.map(({ address }: any) => address);
-
-        return Promise.all(
-          poolAddresses.map((address: string) =>
-            lendingActor
-              .get_pool_info({ pool_address: address })
-              .then((res: any) => (res?.length ? res[0] : null))
-          )
-        );
-      })
-      .then((res: any) => {
-        setPoolList(res.filter((item: any) => !!item));
-      });
-  }, [timer]);
+  console.log(poolList, error);
 
   return (
     <div className="flex-1 p-6 max-w-4xl mx-auto w-full flex-col">
@@ -85,7 +31,7 @@ export default function Home() {
               </div>
             </div>
             {poolList.map((pool) => (
-              <PoolRow pool={pool} key={pool.key} />
+              <PoolRow pool={pool} key={pool.address} />
             ))}
           </div>
         </>

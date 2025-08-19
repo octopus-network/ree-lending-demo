@@ -1,46 +1,31 @@
-import * as bitcoin from "bitcoinjs-lib";
-
 import { TabsContent } from "@/components/ui/tabs";
-import { COIN_LIST, BITCOIN, UTXO_DUST, EXCHANGE_ID } from "@/lib/constants";
+import { COIN_LIST, BITCOIN } from "@/lib/constants";
 import { useEffect, useMemo, useState } from "react";
 
 import { useLaserEyes } from "@omnisat/lasereyes";
-import { RuneId, Runestone, none, Edict } from "runelib";
-import { reverseBuffer, hexToBytes } from "@/lib/utils";
-import { UTXO_PROOF_SERVER } from "@/lib/constants";
-import { useAddSpentUtxos } from "@/hooks/useSpentUtxos";
-import { Orchestrator } from "@/lib/orchestrator";
+
 import {
   formatCoinAmount,
   formatNumber,
   parseCoinAmount,
   cn,
-  utxoToInput,
-  getP2trAressAndScript,
-  addressTypeToString,
-  getAddressType,
-  selectBtcUtxos,
 } from "@/lib/utils";
 
-import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Pool,
-  DepositOffer,
-  UnspentOutput,
-  AddressType,
-  ToSignInput,
-  TxInput,
-  InputCoin,
-} from "@/lib/types";
+import { DepositOffer } from "@/lib/types";
 
 import { toast } from "sonner";
-import { actor as lendingActor } from "@/lib/exchange/actor";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useBtcUtxos } from "@/hooks/useUtxos";
+
 import { Loader2 } from "lucide-react";
-import { useCoinBalance } from "@/hooks/useBalance";
+
+import {
+  type Pool,
+  useRee,
+  usePoolInfo,
+  useBtcBalance,
+} from "@omnity/ree-ts-sdk";
 
 export function DepositContent({
   pool,
@@ -51,33 +36,31 @@ export function DepositContent({
 }) {
   const [isQuoting, setIsQuoting] = useState(false);
   const [isSubmiting, setIsSubmiting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
 
-  const [fee, setFee] = useState(BigInt(1));
-  const { paymentAddress, address, signPsbt } = useLaserEyes();
+  const { exchange, createTransaction } = useRee();
+  const { poolInfo } = usePoolInfo(pool.address);
+
+  const { signPsbt, address } = useLaserEyes();
+
   const [coin, coinReserved, btcReserved] = useMemo(() => {
-    const coin = COIN_LIST.find((coin) => coin.id === pool.coin_reserved[0].id);
-    return [coin, pool.coin_reserved[0].value, pool.btc_reserved];
-  }, [pool]);
+    if (!poolInfo) {
+      return [null, BigInt(0), BigInt(0)];
+    }
+    const firstCoin = poolInfo.coin_reserved[0];
+    if (!firstCoin) {
+      return [null, BigInt(0), poolInfo.btc_reserved];
+    }
+    const coin = COIN_LIST.find((coin) => coin.id === firstCoin.id);
+
+    return [coin, firstCoin.value, poolInfo.btc_reserved];
+  }, [poolInfo]);
 
   const [inputAmount, setInputAmount] = useState("");
   const [depositOffer, setDepositOffer] = useState<DepositOffer>();
-  const [toSpendUtxos, setToSpendUtxos] = useState<UnspentOutput[]>([]);
-  const [initiatorUtxoProof, setInitiatorUtxoProof] = useState<number[]>();
 
-  const btcUtxos = useBtcUtxos();
-  const btcBalance = useCoinBalance(BITCOIN);
-
-  const addSpentUtxos = useAddSpentUtxos();
+  const { balance: btcBalance } = useBtcBalance();
 
   const debouncedInputAmount = useDebounce(inputAmount, 300);
-
-  const [poolSpendOutpoints, setPoolSpendOutpoints] = useState<string[]>([]);
-  const [poolReceiveOutpoints, setPoolReceiveOutpoints] = useState<string[]>(
-    []
-  );
-  const [inputCoins, setInputCoins] = useState<InputCoin[]>([]);
-  const [psbt, setPsbt] = useState<bitcoin.Psbt>();
 
   const btcAmount = useMemo(
     () => formatCoinAmount(btcReserved.toString(), BITCOIN),
@@ -90,318 +73,59 @@ export function DepositContent({
   );
 
   useEffect(() => {
-    if (!toSpendUtxos.length || !paymentAddress) {
-      setInitiatorUtxoProof(undefined);
-      return;
-    }
-
-    const utxos = toSpendUtxos.filter(
-      (utxo) => utxo.address === paymentAddress
-    );
-
-    axios
-      .post(`${UTXO_PROOF_SERVER}/get_proof`, {
-        network: "Testnet",
-        btc_address: paymentAddress,
-        utxos: utxos.map(({ height, txid, satoshis, vout }: UnspentOutput) => ({
-          outpoint: {
-            txid: Array.from(reverseBuffer(hexToBytes(txid))),
-            vout,
-          },
-          value: Number(satoshis),
-          height,
-        })),
-      })
-      .then((res) => res.data)
-      .then((data) => {
-        setInitiatorUtxoProof(data.Ok);
-      })
-      .catch((err) => {
-        setInitiatorUtxoProof([]);
-      });
-  }, [toSpendUtxos, paymentAddress]);
-
-  useEffect(() => {
     if (!Number(debouncedInputAmount)) {
       return;
     }
 
     const btcAmount = parseCoinAmount(debouncedInputAmount, BITCOIN);
     setIsQuoting(true);
-    lendingActor
-      .pre_deposit(pool.address, {
+    exchange
+      .pre_deposit?.(pool.address, {
         id: BITCOIN.id,
         value: BigInt(btcAmount),
       })
       .then((res: any) => {
         if (res.Ok) {
           setDepositOffer(res.Ok);
+        } else {
+          throw new Error(JSON.stringify(res.Err));
         }
+      })
+      .catch((err) => {
+        console.log("pre deposit error:", err);
       })
       .finally(() => {
         setIsQuoting(false);
       });
   }, [debouncedInputAmount, coin]);
 
-  useEffect(() => {
-    if (!depositOffer || !btcUtxos?.length || !coin) {
-      return;
-    }
-
-    const genPsbt = async () => {
-      setIsGenerating(true);
-      const depositBtcAmount = BigInt(
-        parseCoinAmount(debouncedInputAmount, BITCOIN)
-      );
-
-      console.log("depositOffer", depositOffer);
-
-      const poolAddress = pool.address;
-
-      const { output } = getP2trAressAndScript(pool.key);
-
-      const poolUtxo0 = depositOffer.pool_utxo[0];
-      const poolUtxo: UnspentOutput = {
-        txid: poolUtxo0.txid,
-        vout: poolUtxo0.vout,
-        satoshis: poolUtxo0.sats.toString(),
-        address: poolAddress,
-        scriptPk: output,
-        pubkey: "",
-        addressType: AddressType.P2TR,
-        runes: [
-          {
-            id: poolUtxo0.coins[0].id,
-            amount: poolUtxo0.coins[0].value.toString(),
-          },
-        ],
-      };
-
-      let poolRuneAmount = poolUtxo0.coins[0].value,
-        poolBtcAmount = poolUtxo0.sats;
-
-      const _psbt = new bitcoin.Psbt({
-        network: bitcoin.networks.testnet,
-      });
-
-      // inputs
-      const txInputs: TxInput[] = [];
-      txInputs.push(utxoToInput(poolUtxo));
-
-      const [runeBlock, runeIdx] = coin?.id.split(":");
-
-      const edicts = [
-        new Edict(
-          new RuneId(Number(runeBlock), Number(runeIdx)),
-          poolRuneAmount,
-          0
-        ),
-      ];
-
-      const runestone = new Runestone(edicts, none(), none(), none());
-
-      const poolVouts: number[] = [];
-
-      poolVouts.push(0);
-
-      _psbt.addOutput({
-        address: poolAddress,
-        value: Number(poolBtcAmount + depositBtcAmount),
-      });
-
-      const opReturnScript = runestone.encipher();
-      // OP_RETURN
-      _psbt.addOutput({
-        script: opReturnScript,
-        value: 0,
-      });
-
-      let inputTypes = [addressTypeToString(getAddressType(poolAddress))];
-
-      const outputTypes = [
-        addressTypeToString(getAddressType(poolAddress)),
-        { OpReturn: BigInt(opReturnScript.length) },
-        addressTypeToString(getAddressType(paymentAddress)),
-      ];
-
-      let lastFee = BigInt(0);
-      let currentFee = BigInt(0);
-      let selectedUtxos: UnspentOutput[] = [];
-      let targetBtcAmount = BigInt(0);
-
-      do {
-        lastFee = currentFee;
-
-        currentFee = await Orchestrator.getEstimateMinTxFee({
-          input_types: inputTypes,
-          pool_address: [poolAddress],
-          output_types: outputTypes,
-        });
-        currentFee += BigInt(1);
-        targetBtcAmount = depositBtcAmount + currentFee;
-
-        if (currentFee > lastFee && targetBtcAmount > 0) {
-          const { selectedUtxos: _selectedUtxos } = selectBtcUtxos(
-            btcUtxos,
-            targetBtcAmount
-          );
-          if (_selectedUtxos.length === 0) {
-            throw new Error("INSUFFICIENT_BTC_UTXO");
-          }
-
-          inputTypes = [
-            addressTypeToString(getAddressType(poolAddress)),
-            ..._selectedUtxos.map(() =>
-              addressTypeToString(getAddressType(paymentAddress))
-            ),
-          ];
-
-          const totalBtcAmount = _selectedUtxos.reduce(
-            (total, curr) => total + BigInt(curr.satoshis),
-            BigInt(0)
-          );
-
-          if (
-            totalBtcAmount - targetBtcAmount > 0 &&
-            totalBtcAmount - targetBtcAmount > UTXO_DUST
-          ) {
-            outputTypes.pop();
-            outputTypes.push(
-              addressTypeToString(getAddressType(paymentAddress))
-            );
-          }
-
-          selectedUtxos = _selectedUtxos;
-        }
-      } while (currentFee > lastFee && targetBtcAmount > 0);
-
-      let totalBtcAmount = BigInt(0);
-
-      selectedUtxos.forEach((utxo) => {
-        txInputs.push(utxoToInput(utxo));
-        totalBtcAmount += BigInt(utxo.satoshis);
-      });
-
-      const changeBtcAmount = totalBtcAmount - targetBtcAmount;
-
-      if (changeBtcAmount < 0) {
-        throw new Error("Inssuficient UTXO(s)");
-      }
-
-      if (changeBtcAmount > UTXO_DUST) {
-        _psbt.addOutput({
-          address: paymentAddress,
-          value: Number(changeBtcAmount),
-        });
-      }
-
-      txInputs.forEach((input) => {
-        _psbt.data.addInput(input.data);
-      });
-
-      //@ts-expect-error: todo
-      const unsignedTx = _psbt.__CACHE.__TX;
-
-      const toSignInputs: ToSignInput[] = [];
-
-      const _toSpendUtxos = txInputs
-        .filter(({ utxo }, index) => {
-          const isUserInput =
-            utxo.address === address || utxo.address === paymentAddress;
-          const addressType = getAddressType(utxo.address);
-          if (isUserInput) {
-            toSignInputs.push({
-              index,
-              ...(addressType === AddressType.P2TR
-                ? { address: utxo.address, disableTweakSigner: false }
-                : { publicKey: utxo.pubkey, disableTweakSigner: true }),
-            });
-          }
-          return isUserInput;
-        })
-        .map((input) => input.utxo);
-
-      setToSpendUtxos(_toSpendUtxos);
-      const unsignedTxClone = unsignedTx.clone();
-
-      for (let i = 0; i < toSignInputs.length; i++) {
-        const toSignInput = toSignInputs[i];
-
-        const toSignIndex = toSignInput.index;
-        const input = txInputs[toSignIndex];
-        const inputAddress = input.utxo.address;
-        if (!inputAddress) continue;
-        const redeemScript = _psbt.data.inputs[toSignIndex].redeemScript;
-        const addressType = getAddressType(inputAddress);
-
-        if (redeemScript && addressType === AddressType.P2SH_P2WPKH) {
-          const finalScriptSig = bitcoin.script.compile([redeemScript]);
-          unsignedTxClone.setInputScript(toSignIndex, finalScriptSig);
-        }
-      }
-
-      const txid = unsignedTxClone.getId();
-
-      setPoolSpendOutpoints([`${poolUtxo.txid}:${poolUtxo.vout}`]);
-
-      setPoolReceiveOutpoints(poolVouts.map((vout) => `${txid}:${vout}`));
-
-      setInputCoins([
-        {
-          from: paymentAddress,
-          coin: {
-            id: BITCOIN.id,
-            value: depositBtcAmount,
-          },
-        },
-      ]);
-
-      setPsbt(_psbt);
-      setIsGenerating(false);
-
-      setFee(currentFee);
-    };
-
-    genPsbt();
-  }, [depositOffer, coin, debouncedInputAmount, pool, paymentAddress, address]);
-
   const onSubmit = async () => {
-    if (!psbt || !depositOffer || !initiatorUtxoProof) {
+    if (!depositOffer) {
       return;
     }
     setIsSubmiting(true);
     try {
-      const psbtBase64 = psbt.toBase64();
-      const res = await signPsbt(psbtBase64);
+      const depositBtcAmount = BigInt(
+        parseCoinAmount(debouncedInputAmount, BITCOIN)
+      );
+      const tx = await createTransaction({
+        poolAddress: pool.address,
+        sendBtcAmount: depositBtcAmount,
+        sendRuneAmount: BigInt(0),
+        receiveBtcAmount: BigInt(0),
+        receiveRuneAmount: BigInt(0),
+      });
+
+      const psbt = await tx.build("deposit", depositOffer.nonce, "");
+
+      const res = await signPsbt(psbt.toBase64());
       const signedPsbtHex = res?.signedPsbtHex ?? "";
 
       if (!signedPsbtHex) {
-        throw new Error("Signed Failed");
+        throw new Error("Sign Failed");
       }
 
-      const txid = await Orchestrator.invoke({
-        initiator_utxo_proof: [],
-        intention_set: {
-          tx_fee_in_sats: fee,
-          initiator_address: paymentAddress,
-          intentions: [
-            {
-              action: "deposit",
-              exchange_id: EXCHANGE_ID,
-              input_coins: inputCoins,
-              pool_utxo_spent: [],
-              pool_utxo_received: [],
-              output_coins: [],
-              pool_address: pool.address,
-              action_params: "",
-              nonce: depositOffer.nonce,
-            },
-          ],
-        },
-        psbt_hex: signedPsbtHex,
-      });
-
-      addSpentUtxos(toSpendUtxos);
+      const txid = await tx.send(signedPsbtHex);
 
       onSuccess(txid);
     } catch (error: any) {
@@ -413,8 +137,6 @@ export function DepositContent({
       setIsSubmiting(false);
     }
   };
-
-  console.log(initiatorUtxoProof);
 
   return (
     <TabsContent value="deposit">
@@ -443,19 +165,11 @@ export function DepositContent({
         <Button
           className="w-full"
           size="lg"
-          disabled={
-            !psbt ||
-            isSubmiting ||
-            isGenerating ||
-            !paymentAddress ||
-            !initiatorUtxoProof
-          }
+          disabled={!depositOffer || isSubmiting}
           onClick={onSubmit}
         >
-          {(isSubmiting || isGenerating) && (
-            <Loader2 className="animate-spin" />
-          )}
-          {!paymentAddress ? "Connect Wallet" : "Deposit"}
+          {isSubmiting && <Loader2 className="animate-spin" />}
+          {!address ? "Connect Wallet" : "Deposit"}
         </Button>
       </div>
       <div className="mt-2 text-xs flex flex-col gap-1">
