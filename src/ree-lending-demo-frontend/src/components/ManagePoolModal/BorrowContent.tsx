@@ -100,7 +100,7 @@ export function BorrowContent({
   }, [debouncedInputAmount, coin]);
 
   const onSubmit = async () => {
-    if (!borrowOffer) {
+    if (!borrowOffer || !coin) {
       return;
     }
     setIsSubmiting(true);
@@ -113,6 +113,7 @@ export function BorrowContent({
 
       const tx = await createTransaction({
         poolAddress: pool.address,
+        runeId: coin.id,
         sendBtcAmount: BigInt(0),
         sendRuneAmount: runeAmount,
         receiveBtcAmount: borrowBtcAmount,
