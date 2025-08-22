@@ -16,7 +16,7 @@ import {
 } from "@omnisat/lasereyes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useRee } from "@omnity/ree-ts-sdk";
+import { useRee } from "@omnity/ree-client-ts-sdk";
 
 function WalletRow({
   wallet,

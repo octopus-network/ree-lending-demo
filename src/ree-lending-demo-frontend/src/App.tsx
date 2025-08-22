@@ -3,7 +3,7 @@ import { Topbar } from "./components/Topbar";
 import { Toaster } from "./components/ui/sonner";
 import { LaserEyesProvider } from "@omnisat/lasereyes";
 import Home from "./Home";
-import { Network, ReeProvider } from "@omnity/ree-ts-sdk";
+import { Network, ReeProvider } from "@omnity/ree-client-ts-sdk";
 import { idlFactory } from "./lib/exchange/did";
 
 function App() {

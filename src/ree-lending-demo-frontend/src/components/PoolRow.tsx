@@ -4,7 +4,7 @@ import { CoinIcon } from "./CoinIcon";
 import { formatCoinAmount, formatNumber } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { ManagePoolModal } from "./ManagePoolModal";
-import { type Pool, usePoolInfo } from "@omnity/ree-ts-sdk";
+import { type Pool, usePoolInfo } from "@omnity/ree-client-ts-sdk";
 
 export function PoolRow({ pool }: { pool: Pool }) {
   const { poolInfo } = usePoolInfo(pool.address);

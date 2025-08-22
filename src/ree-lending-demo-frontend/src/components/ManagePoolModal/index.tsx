@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Pool } from "@omnity/ree-ts-sdk";
+import type { Pool } from "@omnity/ree-client-ts-sdk";
 import { useState } from "react";
 import { DepositContent } from "./DepositContent";
 import { BorrowContent } from "./BorrowContent";

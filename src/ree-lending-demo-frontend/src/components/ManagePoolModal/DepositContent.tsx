@@ -25,7 +25,7 @@ import {
   useRee,
   usePoolInfo,
   useBtcBalance,
-} from "@omnity/ree-ts-sdk";
+} from "@omnity/ree-client-ts-sdk";
 
 export function DepositContent({
   pool,

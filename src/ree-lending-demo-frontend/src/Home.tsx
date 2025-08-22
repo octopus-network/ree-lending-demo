@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react";
 
 import { PoolRow } from "./components/PoolRow";
 
-import { usePoolList } from "@omnity/ree-ts-sdk";
+import { usePoolList } from "@omnity/ree-client-ts-sdk";
 
 export default function Home() {
   const { pools: poolList, error } = usePoolList();

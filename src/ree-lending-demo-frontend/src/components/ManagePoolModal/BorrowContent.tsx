@@ -26,7 +26,7 @@ import {
   useRee,
   usePoolInfo,
   useRuneBalance,
-} from "@omnity/ree-ts-sdk";
+} from "@omnity/ree-client-ts-sdk";
 
 export function BorrowContent({
   pool,
