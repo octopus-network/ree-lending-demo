@@ -4,7 +4,6 @@ use candid::{CandidType, Deserialize};
 use ic_cdk_macros::{query, update};
 use ree_exchange_sdk::prelude::Metadata;
 use ree_exchange_sdk::prelude::*;
-use ree_exchange_sdk::schnorr::sign_p2tr_in_psbt;
 use ree_exchange_sdk::types::bitcoin::psbt::Psbt;
 use ree_exchange_sdk::types::{CoinBalance, Txid, Utxo, exchange_interfaces::NewBlockInfo};
 use serde::Serialize;
@@ -67,17 +66,32 @@ async fn init_pool() -> Result<(), String> {
         return Err("Not authorized".to_string());
     }
 
-    let metadata = Metadata::generate_new::<exchange::LendingPools>(
-        "HOPE•YOU•GET•RICH".to_string(),
-        "72798:1058".to_string(),
-    )
-    .await
-    .expect("Failed to call chain-key API");
+    let metadata = Metadata::new::<exchange::LendingPools>("72798:1058".to_string())
+        .await
+        .expect("Failed to call chain-key API");
 
     let pool = Pool::new(metadata);
 
     // Store the pool in the storage
     exchange::LendingPools::insert(pool);
+    Ok(())
+}
+
+#[query]
+pub fn get_blocks() -> Vec<u32> {
+    let a = exchange::get_blocks();
+    ic_cdk::println!("!!! get_blocks: {:?}", a);
+    a
+}
+
+#[update]
+pub fn reset_blocks() -> Result<(), String> {
+    let caller = ic_cdk::api::msg_caller();
+    if !ic_cdk::api::is_controller(&caller) {
+        return Err("Not authorized".to_string());
+    }
+
+    exchange::reset_blocks();
     Ok(())
 }
 
@@ -107,17 +121,21 @@ pub mod exchange {
         }
     }
 
+    pub fn get_blocks() -> Vec<u32> {
+        __BLOCKS.with_borrow(|blocks| blocks.iter().map(|b| b.key().clone()).collect())
+    }
+
+    pub fn reset_blocks() {
+        __BLOCKS.with_borrow_mut(|blocks| blocks.clear_new());
+    }
+
     #[hook]
     impl Hook for LendingPools {
-        fn pre_new_block(args: NewBlockInfo) {
-            ic_cdk::println!("!!! pre_new_block: {}", args.block_height);
-        }
-
-        fn on_tx_rollbacked<S>(
+        fn on_tx_rollbacked(
             address: String,
             txid: Txid,
             reason: String,
-            _rollbacked_states: Vec<S>,
+            _rollbacked_states: Vec<Self::State>,
         ) {
             ic_cdk::println!("!!! on_tx_rollbacked: {}, {}, {}", address, txid, reason);
         }
@@ -140,19 +158,19 @@ pub mod exchange {
             );
         }
 
-        fn post_new_block(args: NewBlockInfo) {
-            ic_cdk::println!("!!! post_new_block: {}", args.block_height);
+        fn on_block_finalized(args: NewBlockInfo) {
+            ic_cdk::println!("!!! on_block_finalized: {}", args.block_height);
         }
     }
 
     #[action]
-    pub async fn deposit(psbt: &mut Psbt, args: ActionArgs) -> ActionResult<PoolState> {
+    pub async fn deposit(_psbt: &Psbt, args: ActionArgs) -> ActionResult<PoolState> {
         // Get the pool from storage
         let pool = exchange::LendingPools::get(&args.intention.pool_address)
             .expect("already checked in pre_*; qed");
 
         // Validate the deposit transaction and get the new pool state
-        let (new_state, consumed) = crate::pool::validate_deposit(
+        let (new_state, _consumed) = crate::pool::validate_deposit(
             &pool,
             args.txid,
             args.intention.nonce,
@@ -163,28 +181,17 @@ pub mod exchange {
         )
         .map_err(|e| e.to_string())?;
 
-        // Sign the UTXO if there's an existing one to spend
-        if let Some(ref utxo) = consumed {
-            sign_p2tr_in_psbt(
-                psbt,
-                &[utxo.clone()],
-                ree_exchange_sdk::Network::Testnet4,
-                pool.metadata().key_derivation_path.clone(),
-            )
-            .await
-            .map_err(|e| e.to_string())?;
-        }
         Ok(new_state)
     }
 
     #[action]
-    pub async fn borrow(psbt: &mut Psbt, args: ActionArgs) -> ActionResult<PoolState> {
+    pub async fn borrow(_psbt: &Psbt, args: ActionArgs) -> ActionResult<PoolState> {
         // Get the pool from storage
         let pool = exchange::LendingPools::get(&args.intention.pool_address)
             .expect("already checked in pre_*; qed");
 
         // Validate the borrow transaction and get the new pool state
-        let (new_state, consumed) = crate::pool::validate_borrow(
+        let (new_state, _consumed) = crate::pool::validate_borrow(
             &pool,
             args.txid,
             args.intention.nonce,
@@ -193,16 +200,6 @@ pub mod exchange {
             args.intention.input_coins,
             args.intention.output_coins,
         )
-        .map_err(|e| e.to_string())?;
-
-        // Sign the UTXO to be spent
-        sign_p2tr_in_psbt(
-            psbt,
-            &[consumed.clone()],
-            ree_exchange_sdk::Network::Testnet4,
-            pool.metadata().key_derivation_path.clone(),
-        )
-        .await
         .map_err(|e| e.to_string())?;
 
         Ok(new_state)

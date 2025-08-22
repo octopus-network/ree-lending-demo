@@ -572,9 +572,8 @@ dependencies = [
 
 [[package]]
 name = "ree-exchange-sdk"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37a6898802cc87cdbc5f1dc69ed973de4debf22abc148ea41ffeb3efd64a5355"
+version = "0.10.0"
+source = "git+https://github.com/octopus-network/ree-exchange-sdk.git?branch=v10#07c59aecd839c1a9c812f65886a6c678c093bb21"
 dependencies = [
  "bincode",
  "candid",
@@ -588,9 +587,8 @@ dependencies = [
 
 [[package]]
 name = "ree-exchange-sdk-macro"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b8b046d57522ac80a43a04a78554a11593331ed8196bafc070ed714d2fbee28"
+version = "0.10.0"
+source = "git+https://github.com/octopus-network/ree-exchange-sdk.git?branch=v10#07c59aecd839c1a9c812f65886a6c678c093bb21"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -615,9 +613,8 @@ dependencies = [
 
 [[package]]
 name = "ree-types"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5564661a6d578a7ecc2f909716fad0a5a3daa28c8e1960fb014f97480c2b3301"
+version = "0.10.0"
+source = "git+https://github.com/octopus-network/ree-exchange-sdk.git?branch=v10#07c59aecd839c1a9c812f65886a6c678c093bb21"
 dependencies = [
  "anyhow",
  "bincode",
