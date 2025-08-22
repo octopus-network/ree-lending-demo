@@ -17,5 +17,5 @@ serde = { version = "1.0", features = ["derive"] }
 hex = "0.4"
 ic-stable-structures = "0.7"
 ciborium = "0.2"
-ree-exchange-sdk = "0.9.0"
+ree-exchange-sdk = { git = "https://github.com/octopus-network/ree-exchange-sdk.git", branch = "v10" }
 serde_json = "1.0"

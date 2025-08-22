@@ -73,11 +73,13 @@ type Utxo = record {
 };
 service : {
   execute_tx : (ExecuteTxArgs) -> (Result);
+  get_blocks : () -> (vec nat32) query;
   get_pool_info : (GetPoolInfoArgs) -> (opt PoolInfo) query;
   get_pool_list : () -> (vec PoolBasic) query;
   init_pool : () -> (Result_1);
   new_block : (NewBlockInfo) -> (Result_1);
   pre_borrow : (text, CoinBalance) -> (Result_2) query;
   pre_deposit : (text, CoinBalance) -> (Result_3) query;
+  reset_blocks : () -> (Result_1);
   rollback_tx : (RollbackTxArgs) -> (Result_1);
 }

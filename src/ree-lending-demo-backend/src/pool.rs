@@ -60,6 +60,27 @@ impl PoolState {
     }
 }
 
+impl StateView for PoolState {
+    fn inspect_state(&self) -> StateInfo {
+        StateInfo {
+            txid: self.id,
+            nonce: self.nonce,
+            btc_reserved: self.btc_supply(),
+            coin_reserved: vec![CoinBalance {
+                id: self.rune_id,
+                value: self.rune_supply() as u128,
+            }],
+
+            utxos: self
+                .utxo
+                .as_ref()
+                .map(|u| vec![u.clone()])
+                .unwrap_or_default(),
+            attributes: "".to_string(),
+        }
+    }
+}
+
 // Validates a deposit transaction against exchange requirements
 // If valid, generates the new pool state that would result from executing the transaction
 // Returns the new state
@@ -287,25 +308,4 @@ pub(crate) fn validate_borrow(
     state.id = txid;
 
     Ok((state, prev_utxo))
-}
-
-impl StateView for PoolState {
-    fn inspect_state(&self) -> StateInfo {
-        StateInfo {
-            txid: self.id,
-            nonce: self.nonce,
-            btc_reserved: self.btc_supply(),
-            coin_reserved: vec![CoinBalance {
-                id: self.rune_id,
-                value: self.rune_supply() as u128,
-            }],
-
-            utxos: self
-                .utxo
-                .as_ref()
-                .map(|u| vec![u.clone()])
-                .unwrap_or_default(),
-            attributes: "".to_string(),
-        }
-    }
 }
