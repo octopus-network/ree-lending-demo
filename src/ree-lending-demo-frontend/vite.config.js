@@ -1,32 +1,37 @@
 import path from "path";
-import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath, URL } from "url";
-import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-import environment from "vite-plugin-environment";
 import dotenv from "dotenv";
-
-import { nodePolyfills } from "vite-plugin-node-polyfills";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import environment from "vite-plugin-environment";
+import inject from "@rollup/plugin-inject";
 
 dotenv.config({ path: "../../.env" });
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   build: {
     emptyOutDir: true,
+    target: "esnext",
     commonjsOptions: {
       transformMixedEsModules: true,
       requireReturnsDefault: "namespace",
     },
-    target: "esnext",
   },
+
   optimizeDeps: {
     esbuildOptions: {
       define: {
         global: "globalThis",
+        "process.env": "{}",
       },
     },
-    include: ["bip39", "tiny-secp256k1", "bitcoinjs-lib"],
+
+    include: ["bip39", "tiny-secp256k1", "bitcoinjs-lib", "buffer"],
   },
+
   server: {
     proxy: {
       "/api": {
@@ -35,28 +40,33 @@ export default defineConfig({
       },
     },
   },
+
   plugins: [
     react(),
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
     tailwindcss(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-      },
-    }),
+
+    {
+      ...inject({
+        Buffer: ["buffer", "Buffer"],
+      }),
+      enforce: "post",
+      apply: "build",
+    },
   ],
+
   resolve: {
     alias: [
       {
         find: "declarations",
         replacement: fileURLToPath(new URL("../declarations", import.meta.url)),
       },
-      {
-        find: "@",
-        replacement: path.resolve(__dirname, "./src"),
-      },
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+
+      { find: "buffer", replacement: "buffer/" },
     ],
+
     dedupe: ["@dfinity/agent"],
   },
 });

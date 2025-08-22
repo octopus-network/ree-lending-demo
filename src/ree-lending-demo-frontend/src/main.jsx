@@ -1,6 +1,10 @@
 import * as bitcoin from "bitcoinjs-lib";
 import * as ecc from "@bitcoinerlab/secp256k1";
 
+import { Buffer } from "buffer";
+
+globalThis.Buffer = Buffer;
+
 bitcoin.initEccLib(ecc);
 
 import React from "react";
