@@ -3,7 +3,7 @@ import * as ecc from "@bitcoinerlab/secp256k1";
 
 import { Buffer } from "buffer";
 
-globalThis.Buffer = Buffer;
+(window as any).Buffer = (window as any).Buffer || Buffer;
 
 bitcoin.initEccLib(ecc);
 
@@ -12,7 +12,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>

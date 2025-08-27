@@ -108,15 +108,32 @@ export function DepositContent({
       const depositBtcAmount = BigInt(
         parseCoinAmount(debouncedInputAmount, BITCOIN)
       );
+      // const tx = await createTransaction({
+      //   poolAddress: pool.address,
+      //   sendBtcAmount: depositBtcAmount,
+      //   sendRuneAmount: BigInt(0),
+      //   receiveBtcAmount: BigInt(0),
+      //   receiveRuneAmount: BigInt(0),
+      // });
+
       const tx = await createTransaction({
-        poolAddress: pool.address,
-        sendBtcAmount: depositBtcAmount,
-        sendRuneAmount: BigInt(0),
-        receiveBtcAmount: BigInt(0),
-        receiveRuneAmount: BigInt(0),
+        involvedPoolAddresses: [pool.address],
       });
 
-      const psbt = await tx.build("deposit", depositOffer.nonce, "");
+      tx.addIntention({
+        poolAddress: pool.address,
+        action: "deposit",
+        inputCoins: [
+          {
+            id: BITCOIN.id,
+            value: depositBtcAmount,
+          },
+        ],
+        outputCoins: [],
+        nonce: depositOffer.nonce,
+      });
+
+      const psbt = await tx.build();
 
       const res = await signPsbt(psbt.toBase64());
       const signedPsbtHex = res?.signedPsbtHex ?? "";

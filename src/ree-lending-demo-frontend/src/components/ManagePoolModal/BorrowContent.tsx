@@ -111,16 +111,39 @@ export function BorrowContent({
         parseCoinAmount(debouncedInputAmount, BITCOIN)
       );
 
+      // const tx = await createTransaction({
+      //   poolAddress: pool.address,
+      //   runeId: coin.id,
+      //   sendBtcAmount: BigInt(0),
+      //   sendRuneAmount: runeAmount,
+      //   receiveBtcAmount: borrowBtcAmount,
+      //   receiveRuneAmount: BigInt(0),
+      // });
+
       const tx = await createTransaction({
-        poolAddress: pool.address,
-        runeId: coin.id,
-        sendBtcAmount: BigInt(0),
-        sendRuneAmount: runeAmount,
-        receiveBtcAmount: borrowBtcAmount,
-        receiveRuneAmount: BigInt(0),
+        involvedPoolAddresses: [pool.address],
+        involvedRuneIds: [coin.id],
       });
 
-      const psbt = await tx.build("borrow", borrowOffer.nonce, "");
+      tx.addIntention({
+        poolAddress: pool.address,
+        action: "borrow",
+        inputCoins: [
+          {
+            id: coin.id,
+            value: runeAmount,
+          },
+        ],
+        outputCoins: [
+          {
+            id: BITCOIN.id,
+            value: borrowBtcAmount,
+          },
+        ],
+        nonce: borrowOffer.nonce,
+      });
+
+      const psbt = await tx.build();
       const res = await signPsbt(psbt.toBase64());
       const signedPsbtHex = res?.signedPsbtHex ?? "";
 
