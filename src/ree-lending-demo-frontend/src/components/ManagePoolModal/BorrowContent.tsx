@@ -26,6 +26,8 @@ import {
   useRee,
   usePoolInfo,
   useRuneBalance,
+  utils as reeUtils,
+  Network,
 } from "@omnity/ree-client-ts-sdk";
 
 export function BorrowContent({
@@ -116,6 +118,13 @@ export function BorrowContent({
       tx.addIntention({
         poolAddress: pool.address,
         action: "borrow",
+        poolUtxos: [
+          reeUtils.formatPoolUtxo(
+            pool.address,
+            borrowOffer.pool_utxo,
+            Network.Testnet
+          ),
+        ],
         inputCoins: [
           {
             coin: {

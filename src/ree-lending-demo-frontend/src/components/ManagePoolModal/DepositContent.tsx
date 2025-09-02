@@ -25,6 +25,8 @@ import {
   useRee,
   usePoolInfo,
   useBtcBalance,
+  utils as reeUtils,
+  Network,
 } from "@omnity/ree-client-ts-sdk";
 
 export function DepositContent({
@@ -108,19 +110,19 @@ export function DepositContent({
       const depositBtcAmount = BigInt(
         parseCoinAmount(debouncedInputAmount, BITCOIN)
       );
-      // const tx = await createTransaction({
-      //   poolAddress: pool.address,
-      //   sendBtcAmount: depositBtcAmount,
-      //   sendRuneAmount: BigInt(0),
-      //   receiveBtcAmount: BigInt(0),
-      //   receiveRuneAmount: BigInt(0),
-      // });
 
       const tx = await createTransaction();
 
       tx.addIntention({
         poolAddress: pool.address,
         action: "deposit",
+        poolUtxos: [
+          reeUtils.formatPoolUtxo(
+            pool.address,
+            depositOffer.pool_utxo[0],
+            Network.Testnet
+          ),
+        ],
         inputCoins: [
           {
             coin: {
