@@ -40,7 +40,7 @@ export function DepositContent({
   const { exchange, createTransaction } = useRee();
   const { poolInfo } = usePoolInfo(pool.address);
 
-  const { signPsbt, address } = useLaserEyes();
+  const { signPsbt, address, paymentAddress } = useLaserEyes();
 
   const [coin, coinReserved, btcReserved] = useMemo(() => {
     if (!poolInfo) {
@@ -116,17 +116,18 @@ export function DepositContent({
       //   receiveRuneAmount: BigInt(0),
       // });
 
-      const tx = await createTransaction({
-        involvedPoolAddresses: [pool.address],
-      });
+      const tx = await createTransaction();
 
       tx.addIntention({
         poolAddress: pool.address,
         action: "deposit",
         inputCoins: [
           {
-            id: BITCOIN.id,
-            value: depositBtcAmount,
+            coin: {
+              id: BITCOIN.id,
+              value: depositBtcAmount,
+            },
+            from: paymentAddress,
           },
         ],
         outputCoins: [],

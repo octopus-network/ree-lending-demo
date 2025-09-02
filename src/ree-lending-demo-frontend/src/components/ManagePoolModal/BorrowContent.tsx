@@ -40,7 +40,7 @@ export function BorrowContent({
 
   const { createTransaction, exchange } = useRee();
   const { poolInfo } = usePoolInfo(pool.address);
-  const { signPsbt, address } = useLaserEyes();
+  const { signPsbt, address, paymentAddress } = useLaserEyes();
 
   const [coin, coinReserved, btcReserved] = useMemo(() => {
     if (!poolInfo) {
@@ -111,33 +111,27 @@ export function BorrowContent({
         parseCoinAmount(debouncedInputAmount, BITCOIN)
       );
 
-      // const tx = await createTransaction({
-      //   poolAddress: pool.address,
-      //   runeId: coin.id,
-      //   sendBtcAmount: BigInt(0),
-      //   sendRuneAmount: runeAmount,
-      //   receiveBtcAmount: borrowBtcAmount,
-      //   receiveRuneAmount: BigInt(0),
-      // });
-
-      const tx = await createTransaction({
-        involvedPoolAddresses: [pool.address],
-        involvedRuneIds: [coin.id],
-      });
+      const tx = await createTransaction();
 
       tx.addIntention({
         poolAddress: pool.address,
         action: "borrow",
         inputCoins: [
           {
-            id: coin.id,
-            value: runeAmount,
+            coin: {
+              id: coin.id,
+              value: runeAmount,
+            },
+            from: address,
           },
         ],
         outputCoins: [
           {
-            id: BITCOIN.id,
-            value: borrowBtcAmount,
+            coin: {
+              id: BITCOIN.id,
+              value: borrowBtcAmount,
+            },
+            to: paymentAddress,
           },
         ],
         nonce: borrowOffer.nonce,

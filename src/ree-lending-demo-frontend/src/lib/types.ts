@@ -10,34 +10,6 @@ export interface Coin {
   number?: number;
 }
 
-export interface UnspentOutput {
-  txid: string;
-  vout: number;
-  satoshis: string;
-  scriptPk: string;
-  pubkey?: string;
-  addressType: AddressType;
-  address: string;
-  runes: {
-    id: string;
-    amount: string;
-  }[];
-  height?: number;
-  rawtx?: string;
-}
-
-export enum AddressType {
-  P2PKH,
-  P2WPKH,
-  P2TR,
-  P2SH_P2WPKH,
-  M44_P2WPKH, // deprecated
-  M44_P2TR, // deprecated
-  P2WSH,
-  P2SH,
-  UNKNOWN,
-}
-
 export interface Pool {
   key: string;
   address: string;
@@ -52,59 +24,6 @@ export interface Pool {
 export type CoinBalance = {
   id: string;
   value: bigint;
-};
-
-export type InputCoin = {
-  coin: CoinBalance;
-  from: string;
-};
-
-export type OutputCoin = {
-  coin: CoinBalance;
-  to: string;
-};
-
-export type Intention = {
-  input_coins: InputCoin[];
-  output_coins: OutputCoin[];
-  action: string;
-  exchange_id: string;
-  action_params: string;
-  pool_utxo_spent: string[];
-  nonce: bigint;
-  pool_utxo_received: string[];
-  pool_address: string;
-};
-
-export type IntentionSet = {
-  tx_fee_in_sats: bigint;
-  initiator_address: string;
-  intentions: Intention[];
-};
-
-export type InvokeArgs = {
-  initiator_utxo_proof: number[];
-  intention_set: IntentionSet;
-  psbt_hex: string;
-};
-
-export type TxOutputType =
-  | { P2WPKH: null }
-  | { P2TR: null }
-  | { P2SH: null }
-  | { OpReturn: bigint };
-
-export type EstimateMinTxFeeArgs = {
-  input_types: TxOutputType[];
-  pool_address: string[];
-  output_types: TxOutputType[];
-};
-
-export type OutpointWithValue = {
-  maybe_rune: [CoinBalance];
-  value: bigint;
-  script_pubkey_hex: string;
-  outpoint: string;
 };
 
 export type DepositOffer = {
@@ -129,21 +48,4 @@ export type BorrowOffer = {
   };
   input_runes: CoinBalance;
   output_btc: CoinBalance;
-};
-
-export interface TxInput {
-  data: {
-    hash: string;
-    index: number;
-    witnessUtxo?: { value: number; script: Buffer };
-    tapInternalKey?: Buffer;
-    nonWitnessUtxo?: Buffer;
-  };
-  utxo: UnspentOutput;
-}
-
-export type ToSignInput = {
-  publicKey?: string;
-  address?: string;
-  index: number;
 };
