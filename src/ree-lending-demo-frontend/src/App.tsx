@@ -16,7 +16,7 @@ function App() {
       <ReeProvider
         config={{
           network: Network.Testnet,
-          maestroApiKey: "v8PTI7ZyNHxUzPvojaabBXuYIUgf9glT",
+          maestroApiKey: "1BscKD1Zmakhvf1NyOww7TcY0cD9ZVYK",
           exchangeIdlFactory: idlFactory,
           exchangeId: "LENDING_DEMO",
           exchangeCanisterId: "rwkfp-zyaaa-aaaao-qj7nq-cai",
