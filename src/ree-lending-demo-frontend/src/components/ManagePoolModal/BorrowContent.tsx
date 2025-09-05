@@ -146,7 +146,7 @@ export function BorrowContent({
         nonce: borrowOffer.nonce,
       });
 
-      const psbt = await tx.build();
+      const { psbt } = await tx.build();
       const res = await signPsbt(psbt.toBase64());
       const signedPsbtHex = res?.signedPsbtHex ?? "";
 

@@ -136,7 +136,7 @@ export function DepositContent({
         nonce: depositOffer.nonce,
       });
 
-      const psbt = await tx.build();
+      const { psbt } = await tx.build();
 
       const res = await signPsbt(psbt.toBase64());
       const signedPsbtHex = res?.signedPsbtHex ?? "";
