@@ -151,7 +151,7 @@ export function BorrowContent({
       const signedPsbtHex = res?.signedPsbtHex ?? "";
 
       if (!signedPsbtHex) {
-        throw new Error("Signed Failed");
+        throw new Error("Sign Failed");
       }
 
       const txid = await tx.send(signedPsbtHex);
