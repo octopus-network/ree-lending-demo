@@ -13,7 +13,6 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
     target: "esnext",
-    // 关键：不要自定义 commonjsOptions，避免破坏 CJS ↔ ESM 互操作
   },
   optimizeDeps: {
     include: [
@@ -43,7 +42,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    // 你需要把 .env 中以 CANISTER_/DFX_ 开头的变量注入的话，可以保留这个
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
     tailwindcss(),
@@ -61,7 +59,6 @@ export default defineConfig({
       { find: "buffer", replacement: "buffer/" },
       { find: "process", replacement: "process/browser" },
     ],
-    // 这里顺手把 react/react-dom 也去重，避免幽灵副本
     dedupe: ["react", "react-dom", "@dfinity/agent"],
   },
 });
