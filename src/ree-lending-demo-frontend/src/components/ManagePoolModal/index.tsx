@@ -6,6 +6,7 @@ import { useState } from "react";
 import { DepositContent } from "./DepositContent";
 import { BorrowContent } from "./BorrowContent";
 import { toast } from "sonner";
+import { ExternalLink } from "lucide-react";
 
 export function ManagePoolModal({
   open,
@@ -18,14 +19,40 @@ export function ManagePoolModal({
 }) {
   const [tab, setTab] = useState("deposit");
 
-  const onDepositSuccess = (txid: string) => {
+  const onDepositSuccess = async (txid: string) => {
     setOpen(false);
-    toast(`Tx sent: ${txid}`);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    toast(`Tx sent: ${txid}`, {
+      action: {
+        label: (
+          <div className="flex items-center space-x-1">
+            <span>View</span>
+            <ExternalLink className="size-3" />
+          </div>
+        ),
+        onClick: () => {
+          window.open(`https://mempool.space/testnet4/tx/${txid}`, "_blank");
+        },
+      },
+    });
   };
 
-  const onBorrowSuccess = (txid: string) => {
+  const onBorrowSuccess = async (txid: string) => {
     setOpen(false);
-    toast(`Tx sent: ${txid}`);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    toast(`Tx sent: ${txid}`, {
+      action: {
+        label: (
+          <div className="flex items-center space-x-1">
+            <span>View</span>
+            <ExternalLink className="size-3" />
+          </div>
+        ),
+        onClick: () => {
+          window.open(`https://mempool.space/testnet4/tx/${txid}`, "_blank");
+        },
+      },
+    });
   };
 
   return (

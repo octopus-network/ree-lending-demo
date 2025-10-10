@@ -6,12 +6,7 @@
       "type": "rust"
     },
     "ree-lending-demo-frontend": {
-      "dependencies": [
-        "ree-lending-demo-backend"
-      ],
-      "source": [
-        "src/ree-lending-demo-frontend/dist"
-      ],
+      "source": ["src/ree-lending-demo-frontend/dist"],
       "type": "assets",
       "workspace": "ree-lending-demo-frontend"
     }

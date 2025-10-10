@@ -1,5 +1,8 @@
 {
   "ree-lending-demo-backend": {
     "ic": "rwkfp-zyaaa-aaaao-qj7nq-cai"
+  },
+  "ree-lending-demo-frontend": {
+    "ic": "j3twb-eiaaa-aaaag-augsq-cai"
   }
 }

@@ -4,5 +4,9 @@
     "headers": {
       "Content-Security-Policy": "default-src 'self'; connect-src 'self' http://localhost:* https://icp0.io https://*.icp0.io https://icp-api.io https://xbt-testnet.gomaestro-api.org https://mpc.omnity.network; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none';"
     }
+  },
+  {
+    "match": ".well-known",
+    "ignore": false
   }
 ]
