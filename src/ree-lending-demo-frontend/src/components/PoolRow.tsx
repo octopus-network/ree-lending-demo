@@ -45,7 +45,7 @@ export function PoolRow({ pool }: { pool: Pool }) {
           <div className="flex items-center">
             {coin && <CoinIcon coin={coin} className="size-9" />}
             <div className="flex flex-col ml-2 gap-1">
-              <span className="text-md">{pool.name}</span>
+              <span className="text-md">{coin?.name ?? pool.name}</span>
               <span className="text-xs text-muted-foreground">
                 {coin?.id || "No coin"}
               </span>
