@@ -116,13 +116,15 @@ export function DepositContent({
       tx.addIntention({
         poolAddress: pool.address,
         action: "deposit",
-        poolUtxos: [
-          reeUtils.formatPoolUtxo(
-            pool.address,
-            depositOffer.pool_utxo[0],
-            Network.Testnet
-          ),
-        ],
+        poolUtxos: depositOffer.pool_utxo?.length
+          ? [
+              reeUtils.formatPoolUtxo(
+                pool.address,
+                depositOffer.pool_utxo[0],
+                Network.Testnet
+              ),
+            ]
+          : [],
         inputCoins: [
           {
             coin: {
