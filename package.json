@@ -16,6 +16,6 @@
     "src/ree-lending-demo-frontend"
   ],
   "dependencies": {
-    "@omnity/ree-client-ts-sdk": "file:../../../ree-sdk"
+    "@omnity/ree-client-ts-sdk": "@omnity/ree-client-ts-sdk"
   }
 }
