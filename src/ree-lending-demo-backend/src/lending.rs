@@ -1,11 +1,12 @@
-use crate::pool::PoolState;
+use crate::lending::exchange::{__CustomStorageAccess, ExchangeStorage};
+use crate::pool::{BlockState, PoolState};
 use crate::{ExchangeError, pool::CoinMeta};
 use candid::{CandidType, Deserialize};
 use ic_cdk_macros::{query, update};
 use ree_exchange_sdk::prelude::Metadata;
 use ree_exchange_sdk::prelude::*;
 use ree_exchange_sdk::types::bitcoin::psbt::Psbt;
-use ree_exchange_sdk::types::{CoinBalance, Txid, Utxo, exchange_interfaces::NewBlockInfo};
+use ree_exchange_sdk::types::{CoinBalance, Utxo};
 use serde::Serialize;
 
 // DepositOffer contains the return information for pre_deposit
@@ -74,6 +75,8 @@ async fn init_pool() -> Result<(), String> {
 
     // Store the pool in the storage
     exchange::LendingPools::insert(pool);
+
+    ExchangeStorage::with_mut(|version| version.set(Some(0)));
     Ok(())
 }
 
@@ -103,19 +106,16 @@ pub mod exchange {
     pub struct LendingPools;
 
     impl Pools for LendingPools {
-        type State = PoolState;
+        type PoolState = PoolState;
+        type BlockState = BlockState;
 
-        const BLOCK_MEMORY: u8 = 0;
-
-        const TRANSACTION_MEMORY: u8 = 1;
-
-        const POOL_MEMORY: u8 = 2;
+        const POOL_STATE_MEMORY: u8 = 0;
+        const BLOCK_STATE_MEMORY: u8 = 1;
 
         fn network() -> ree_exchange_sdk::Network {
             ree_exchange_sdk::Network::Testnet4
         }
 
-        // This is optional
         fn finalize_threshold() -> u32 {
             64
         }
@@ -129,37 +129,28 @@ pub mod exchange {
         __BLOCKS.with_borrow_mut(|blocks| blocks.clear_new());
     }
 
+    #[storage(2)]
+    pub type ExchangeStorage = ree_exchange_sdk::store::StableCell<u32>;
+
     #[hook]
     impl Hook for LendingPools {
-        fn on_tx_rollbacked(
-            address: String,
-            txid: Txid,
-            reason: String,
-            _rollbacked_states: Vec<Self::State>,
-        ) {
-            ic_cdk::println!("!!! on_tx_rollbacked: {}, {}, {}", address, txid, reason);
-        }
-
-        fn on_tx_confirmed(address: String, txid: Txid, block: Block) {
-            ic_cdk::println!(
-                "!!! on_tx_confirmed: {}, {}, {}",
-                address,
-                txid,
-                block.height
-            );
-        }
-
-        fn on_tx_finalized(address: String, txid: Txid, block: Block) {
-            ic_cdk::println!(
-                "!!! on_tx_finalized: {}, {}, {}",
-                address,
-                txid,
-                block.height
-            );
-        }
-
-        fn on_block_finalized(args: NewBlockInfo) {
-            ic_cdk::println!("!!! on_block_finalized: {}", args.block_height);
+        fn on_block_confirmed(block_state: &mut Option<Self::BlockState>, block: Block) {
+            if let Some(state) = block_state {
+                ic_cdk::println!(
+                    "Hook: on_block_confirmed - block number: {}, previous block number: {}",
+                    block.block_height,
+                    state.block_number
+                );
+                state.block_number = block.block_height;
+            } else {
+                ic_cdk::println!(
+                    "Hook: on_block_confirmed - block number: {}, no previous state",
+                    block.block_height
+                );
+                block_state.replace(BlockState {
+                    block_number: block.block_height,
+                });
+            }
         }
     }
 
