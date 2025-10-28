@@ -16,6 +16,5 @@ thiserror = "2"
 serde = { version = "1.0", features = ["derive"] }
 hex = "0.4"
 ic-stable-structures = "0.7"
-ciborium = "0.2"
-ree-exchange-sdk = { git = "https://github.com/octopus-network/ree-exchange-sdk.git", branch = "v10" }
+ree-exchange-sdk = { git = "https://github.com/octopus-network/ree-exchange-sdk.git", branch = "v11" }
 serde_json = "1.0"

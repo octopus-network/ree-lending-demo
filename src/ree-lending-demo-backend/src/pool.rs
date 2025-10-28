@@ -27,6 +27,11 @@ impl CoinMeta {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BlockState {
+    pub block_number: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 // PoolState represents the state of a pool
 // A new PoolState is created and added to the Pool's states chain after each transaction
 pub struct PoolState {
