@@ -87,6 +87,16 @@ pub fn get_blocks() -> Vec<u32> {
     a
 }
 
+#[query]
+pub fn get_block(height: u32) -> Option<ree_exchange_sdk::Block> {
+    exchange::get_block(height)
+}
+
+#[query]
+pub fn get_unconfirmed_txs() -> Vec<ree_exchange_sdk::types::TxRecord> {
+    exchange::get_unconfirmed_txs()
+}
+
 #[update]
 pub fn reset_blocks() -> Result<(), String> {
     let caller = ic_cdk::api::msg_caller();
@@ -123,6 +133,14 @@ pub mod exchange {
 
     pub fn get_blocks() -> Vec<u32> {
         __BLOCKS.with_borrow(|blocks| blocks.iter().map(|b| b.key().clone()).collect())
+    }
+
+    pub fn get_unconfirmed_txs() -> Vec<ree_exchange_sdk::types::TxRecord> {
+        __TX_RECORDS.with_borrow(|txs| txs.iter().map(|e| e.value().clone()).collect())
+    }
+
+    pub fn get_block(height: u32) -> Option<ree_exchange_sdk::Block> {
+        __BLOCKS.with_borrow(|blocks| blocks.get(&height).clone())
     }
 
     pub fn reset_blocks() {
