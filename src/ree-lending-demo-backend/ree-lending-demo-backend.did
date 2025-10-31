@@ -1,3 +1,9 @@
+type Block = record {
+  txs : vec TxRecord;
+  block_hash : text;
+  block_timestamp : nat64;
+  block_height : nat32;
+};
 type BorrowOffer = record {
   pool_utxo : Utxo;
   nonce : nat64;
@@ -65,6 +71,7 @@ type Result_1 = variant { Ok; Err : text };
 type Result_2 = variant { Ok : BorrowOffer; Err : ExchangeError };
 type Result_3 = variant { Ok : DepositOffer; Err : ExchangeError };
 type RollbackTxArgs = record { txid : text; reason_code : text };
+type TxRecord = record { txid : text; pools : vec text };
 type Utxo = record {
   coins : vec CoinBalance;
   sats : nat64;
@@ -73,9 +80,11 @@ type Utxo = record {
 };
 service : {
   execute_tx : (ExecuteTxArgs) -> (Result);
+  get_block : (nat32) -> (opt Block) query;
   get_blocks : () -> (vec nat32) query;
   get_pool_info : (GetPoolInfoArgs) -> (opt PoolInfo) query;
   get_pool_list : () -> (vec PoolBasic) query;
+  get_unconfirmed_txs : () -> (vec TxRecord) query;
   init_pool : () -> (Result_1);
   new_block : (NewBlockInfo) -> (Result_1);
   pre_borrow : (text, CoinBalance) -> (Result_2) query;
