@@ -152,23 +152,13 @@ pub mod exchange {
 
     #[hook]
     impl Hook for LendingPools {
-        fn on_block_confirmed(block_state: &mut Option<Self::BlockState>, block: Block) {
-            if let Some(state) = block_state {
-                ic_cdk::println!(
-                    "Hook: on_block_confirmed - block number: {}, previous block number: {}",
-                    block.block_height,
-                    state.block_number
-                );
-                state.block_number = block.block_height;
-            } else {
-                ic_cdk::println!(
-                    "Hook: on_block_confirmed - block number: {}, no previous state",
-                    block.block_height
-                );
-                block_state.replace(BlockState {
-                    block_number: block.block_height,
-                });
-            }
+        fn on_block_confirmed(block: Block) {
+            ic_cdk::println!(
+                "Hook: on_block_confirmed - block number: {}, previous block number: {:?}",
+                block.block_height,
+                LendingPools::block_state()
+            );
+            LendingPools::commit(block.block_height, BlockState{ block_number: block.block_height });
         }
     }
 
