@@ -2,7 +2,12 @@ import type { Principal } from '@dfinity/principal';
 import type { ActorMethod } from '@dfinity/agent';
 import type { IDL } from '@dfinity/candid';
 
-export interface BlockInfo { 'height' : number, 'hash' : string }
+export interface Block {
+  'txs' : Array<TxRecord>,
+  'block_hash' : string,
+  'block_timestamp' : bigint,
+  'block_height' : number,
+}
 export interface BorrowOffer {
   'pool_utxo' : Utxo,
   'nonce' : bigint,
@@ -25,10 +30,6 @@ export interface ExecuteTxArgs {
   'intention_set' : IntentionSet,
   'intention_index' : number,
   'psbt_hex' : string,
-}
-export interface GetMinimalTxValueArgs {
-  'zero_confirmed_tx_queue_length' : number,
-  'pool_address' : string,
 }
 export interface GetPoolInfoArgs { 'pool_address' : string }
 export interface InputCoin { 'coin' : CoinBalance, 'from' : string }
@@ -67,26 +68,16 @@ export interface PoolInfo {
   'nonce' : bigint,
   'utxos' : Array<Utxo>,
 }
-export type Result = { 'Ok' : [bigint, bigint] } |
+export type Result = { 'Ok' : string } |
   { 'Err' : string };
-export type Result_1 = { 'Ok' : string } |
+export type Result_1 = { 'Ok' : null } |
   { 'Err' : string };
-export type Result_2 = { 'Ok' : null } |
-  { 'Err' : string };
-export type Result_3 = { 'Ok' : BorrowOffer } |
+export type Result_2 = { 'Ok' : BorrowOffer } |
   { 'Err' : ExchangeError };
-export type Result_4 = { 'Ok' : DepositOffer } |
+export type Result_3 = { 'Ok' : DepositOffer } |
   { 'Err' : ExchangeError };
-export type Result_5 = { 'Ok' : Array<BlockInfo> } |
-  { 'Err' : string };
-export type Result_6 = { 'Ok' : Array<TxRecordInfo> } |
-  { 'Err' : string };
-export interface RollbackTxArgs { 'txid' : string }
-export interface TxRecordInfo {
-  'records' : Array<string>,
-  'txid' : string,
-  'confirmed' : boolean,
-}
+export interface RollbackTxArgs { 'txid' : string, 'reason_code' : string }
+export interface TxRecord { 'txid' : string, 'pools' : Array<string> }
 export interface Utxo {
   'coins' : Array<CoinBalance>,
   'sats' : bigint,
@@ -94,20 +85,18 @@ export interface Utxo {
   'vout' : number,
 }
 export interface _SERVICE {
-  'blocks_tx_records_count' : ActorMethod<[], Result>,
-  'execute_tx' : ActorMethod<[ExecuteTxArgs], Result_1>,
-  'get_minimal_tx_value' : ActorMethod<[GetMinimalTxValueArgs], bigint>,
+  'execute_tx' : ActorMethod<[ExecuteTxArgs], Result>,
+  'get_block' : ActorMethod<[number], [] | [Block]>,
+  'get_blocks' : ActorMethod<[], Uint32Array | number[]>,
   'get_pool_info' : ActorMethod<[GetPoolInfoArgs], [] | [PoolInfo]>,
   'get_pool_list' : ActorMethod<[], Array<PoolBasic>>,
-  'init_pool' : ActorMethod<[], Result_2>,
-  'new_block' : ActorMethod<[NewBlockInfo], Result_2>,
-  'pre_borrow' : ActorMethod<[string, CoinBalance], Result_3>,
-  'pre_deposit' : ActorMethod<[string, CoinBalance], Result_4>,
-  'query_blocks' : ActorMethod<[], Result_5>,
-  'query_tx_records' : ActorMethod<[], Result_6>,
-  'reset_blocks' : ActorMethod<[], Result_2>,
-  'reset_tx_records' : ActorMethod<[], Result_2>,
-  'rollback_tx' : ActorMethod<[RollbackTxArgs], Result_2>,
+  'get_unconfirmed_txs' : ActorMethod<[], Array<TxRecord>>,
+  'init_pool' : ActorMethod<[], Result_1>,
+  'new_block' : ActorMethod<[NewBlockInfo], Result_1>,
+  'pre_borrow' : ActorMethod<[string, CoinBalance], Result_2>,
+  'pre_deposit' : ActorMethod<[string, CoinBalance], Result_3>,
+  'reset_blocks' : ActorMethod<[], Result_1>,
+  'rollback_tx' : ActorMethod<[RollbackTxArgs], Result_1>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];
