@@ -32,6 +32,16 @@ export const idlFactory = ({ IDL }) => {
     'psbt_hex' : IDL.Text,
   });
   const Result = IDL.Variant({ 'Ok' : IDL.Text, 'Err' : IDL.Text });
+  const TxRecord = IDL.Record({
+    'txid' : IDL.Text,
+    'pools' : IDL.Vec(IDL.Text),
+  });
+  const Block = IDL.Record({
+    'txs' : IDL.Vec(TxRecord),
+    'block_hash' : IDL.Text,
+    'block_timestamp' : IDL.Nat64,
+    'block_height' : IDL.Nat32,
+  });
   const GetPoolInfoArgs = IDL.Record({ 'pool_address' : IDL.Text });
   const PoolInfo = IDL.Record({
     'key' : IDL.Text,
@@ -80,16 +90,20 @@ export const idlFactory = ({ IDL }) => {
   });
   return IDL.Service({
     'execute_tx' : IDL.Func([ExecuteTxArgs], [Result], []),
+    'get_block' : IDL.Func([IDL.Nat32], [IDL.Opt(Block)], ['query']),
+    'get_blocks' : IDL.Func([], [IDL.Vec(IDL.Nat32)], ['query']),
     'get_pool_info' : IDL.Func(
         [GetPoolInfoArgs],
         [IDL.Opt(PoolInfo)],
         ['query'],
       ),
     'get_pool_list' : IDL.Func([], [IDL.Vec(PoolBasic)], ['query']),
+    'get_unconfirmed_txs' : IDL.Func([], [IDL.Vec(TxRecord)], ['query']),
     'init_pool' : IDL.Func([], [Result_1], []),
     'new_block' : IDL.Func([NewBlockInfo], [Result_1], []),
     'pre_borrow' : IDL.Func([IDL.Text, CoinBalance], [Result_2], ['query']),
     'pre_deposit' : IDL.Func([IDL.Text, CoinBalance], [Result_3], ['query']),
+    'reset_blocks' : IDL.Func([], [Result_1], []),
     'rollback_tx' : IDL.Func([RollbackTxArgs], [Result_1], []),
   });
 };

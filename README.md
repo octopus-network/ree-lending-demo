@@ -2,6 +2,8 @@
 
 ree-lending-demo is a sample application built on REE (Runes Exchange Environment). This repository contains both frontend and backend code, implementing blockchain lending services with two main features: asset depositing and borrowing. The application is deployed at https://ree-lending-demo.vercel.app/
 
+This demo is built using the [REE Exchange SDK](https://github.com/octopus-network/ree-exchange-sdk), which provides the core functionality for interacting with REE protocol.
+
 For more detailed explanation about this application, please refer to [Unlocking Bitcoin L1 DeFi - Building A Lending DApp with REE.pdf](./Unlocking%20Bitcoin%20L1%20DeFi_%20Building%20A%20Lending%20DApp%20with%20REE.pdf).
 
 To learn more about how to build REE applications and implementation details, visit https://docs.omnity.network/docs/REE/introduction.
