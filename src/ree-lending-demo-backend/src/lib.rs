@@ -26,6 +26,9 @@ pub enum ExchangeError {
     PoolStateExpired(u64),
 }
 
+// This is a type definition for demonstration purposes, which holds the version information of the Exchange.
+type Version = u32;
+
 // Demonstration BlockState type definition.
 // This state only stores a block_number and serves no practical purpose in this demo.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

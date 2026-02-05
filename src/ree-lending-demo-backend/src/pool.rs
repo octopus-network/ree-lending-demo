@@ -79,6 +79,10 @@ impl StateView for PoolState {
             attributes: "".to_string(),
         }
     }
+
+    fn set_nonce(&mut self, nonce: u64) {
+        self.nonce = nonce;
+    }
 }
 
 // Validates a deposit transaction against exchange requirements.

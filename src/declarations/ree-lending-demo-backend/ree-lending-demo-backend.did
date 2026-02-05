@@ -20,13 +20,13 @@ type ExchangeError = variant {
   InvalidPool;
   InvalidTxid;
   EmptyPool;
-  InvalidState : text;
 };
 type ExecuteTxArgs = record {
   zero_confirmed_tx_queue_length : nat32;
   txid : text;
   intention_set : IntentionSet;
   intention_index : nat32;
+  is_reapply : opt bool;
   psbt_hex : text;
 };
 type GetPoolInfoArgs = record { pool_address : text };
@@ -85,7 +85,7 @@ service : {
   get_pool_info : (GetPoolInfoArgs) -> (opt PoolInfo) query;
   get_pool_list : () -> (vec PoolBasic) query;
   get_unconfirmed_txs : () -> (vec TxRecord) query;
-  init_pool : () -> (Result_1);
+  init_exchange : () -> (Result_1);
   new_block : (NewBlockInfo) -> (Result_1);
   pre_borrow : (text, CoinBalance) -> (Result_2) query;
   pre_deposit : (text, CoinBalance) -> (Result_3) query;

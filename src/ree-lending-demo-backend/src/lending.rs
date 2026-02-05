@@ -1,3 +1,4 @@
+use crate::Version;
 use crate::lending::exchange::{__CustomStorageAccess, ExchangeStorage};
 use crate::pool::PoolState;
 use crate::{BlockState, ExchangeError, pool::CoinMeta};
@@ -40,7 +41,7 @@ pub struct BorrowOffer {
     pub pool_utxo: Utxo,          // The current UTXO of the pool.
     pub nonce: u64,               // Transaction nonce to prevent replay attacks.
     pub input_runes: CoinBalance, // The collateral asset and amount the user needs to deposit.
-    pub output_btc: CoinBalance,  // The amount of BTC the user will borrow (may be less than requested if insufficient).
+    pub output_btc: CoinBalance, // The amount of BTC the user will borrow (may be less than requested if insufficient).
 }
 
 // pre_borrow queries the information needed to build a borrow transaction
@@ -58,10 +59,10 @@ pub fn pre_borrow(pool_address: String, amount: CoinBalance) -> Result<BorrowOff
     })
 }
 
-// init_pool creates a demonstration lending pool when the exchange is deployed.
+// init_exchange creates a demonstration lending pool when the exchange is deployed.
 // This pool allows users to borrow BTC satoshis at a 1:1 ratio by depositing RICH tokens as collateral.
 #[update]
-async fn init_pool() -> Result<(), String> {
+async fn init_exchange() -> Result<(), String> {
     let caller = ic_cdk::api::msg_caller();
     if !ic_cdk::api::is_controller(&caller) {
         return Err("Not authorized".to_string());
@@ -157,7 +158,7 @@ pub mod exchange {
 
     // Set the memory ID and type for exchange state storage.
     #[storage(2)]
-    pub type ExchangeStorage = ree_exchange_sdk::store::StableCell<u32>;
+    pub type ExchangeStorage = ree_exchange_sdk::store::StableCell<Version>;
 
     #[hook]
     impl Hook for LendingPools {
@@ -195,7 +196,7 @@ pub mod exchange {
             args.intention.input_coins,
             args.intention.output_coins,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| ree_exchange_sdk::error::Error::Custom(0, e.to_string()))?;
 
         Ok(new_state)
     }
@@ -216,7 +217,7 @@ pub mod exchange {
             args.intention.input_coins,
             args.intention.output_coins,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| ree_exchange_sdk::error::Error::Custom(0, e.to_string()))?;
 
         Ok(new_state)
     }

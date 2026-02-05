@@ -29,6 +29,7 @@ export const idlFactory = ({ IDL }) => {
     'txid' : IDL.Text,
     'intention_set' : IntentionSet,
     'intention_index' : IDL.Nat32,
+    'is_reapply' : IDL.Opt(IDL.Bool),
     'psbt_hex' : IDL.Text,
   });
   const Result = IDL.Variant({ 'Ok' : IDL.Text, 'Err' : IDL.Text });
@@ -76,7 +77,6 @@ export const idlFactory = ({ IDL }) => {
     'InvalidPool' : IDL.Null,
     'InvalidTxid' : IDL.Null,
     'EmptyPool' : IDL.Null,
-    'InvalidState' : IDL.Text,
   });
   const Result_2 = IDL.Variant({ 'Ok' : BorrowOffer, 'Err' : ExchangeError });
   const DepositOffer = IDL.Record({
@@ -99,7 +99,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'get_pool_list' : IDL.Func([], [IDL.Vec(PoolBasic)], ['query']),
     'get_unconfirmed_txs' : IDL.Func([], [IDL.Vec(TxRecord)], ['query']),
-    'init_pool' : IDL.Func([], [Result_1], []),
+    'init_exchange' : IDL.Func([], [Result_1], []),
     'new_block' : IDL.Func([NewBlockInfo], [Result_1], []),
     'pre_borrow' : IDL.Func([IDL.Text, CoinBalance], [Result_2], ['query']),
     'pre_deposit' : IDL.Func([IDL.Text, CoinBalance], [Result_3], ['query']),

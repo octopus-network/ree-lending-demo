@@ -22,13 +22,13 @@ export type ExchangeError = { 'InvalidSignPsbtArgs' : string } |
   { 'TooSmallFunds' : null } |
   { 'InvalidPool' : null } |
   { 'InvalidTxid' : null } |
-  { 'EmptyPool' : null } |
-  { 'InvalidState' : string };
+  { 'EmptyPool' : null };
 export interface ExecuteTxArgs {
   'zero_confirmed_tx_queue_length' : number,
   'txid' : string,
   'intention_set' : IntentionSet,
   'intention_index' : number,
+  'is_reapply' : [] | [boolean],
   'psbt_hex' : string,
 }
 export interface GetPoolInfoArgs { 'pool_address' : string }
@@ -91,7 +91,7 @@ export interface _SERVICE {
   'get_pool_info' : ActorMethod<[GetPoolInfoArgs], [] | [PoolInfo]>,
   'get_pool_list' : ActorMethod<[], Array<PoolBasic>>,
   'get_unconfirmed_txs' : ActorMethod<[], Array<TxRecord>>,
-  'init_pool' : ActorMethod<[], Result_1>,
+  'init_exchange' : ActorMethod<[], Result_1>,
   'new_block' : ActorMethod<[NewBlockInfo], Result_1>,
   'pre_borrow' : ActorMethod<[string, CoinBalance], Result_2>,
   'pre_deposit' : ActorMethod<[string, CoinBalance], Result_3>,

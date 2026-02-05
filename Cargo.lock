@@ -529,9 +529,9 @@ dependencies = [
 
 [[package]]
 name = "ree-exchange-sdk"
-version = "0.11.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46515fc8aaf09697d5dc671ba8f6241312f1a65ddc8d023ca6441265f2e05cfb"
+checksum = "0613047073aaccb3f295ba168f5e379ba428651bf66aeda368303c873e1d909f"
 dependencies = [
  "bincode",
  "candid",
@@ -545,9 +545,9 @@ dependencies = [
 
 [[package]]
 name = "ree-exchange-sdk-macro"
-version = "0.11.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5186c9df0e2c6fe78ded845222ed44dab7fa47d730d38b89cfb5aa4ed8bed2d2"
+checksum = "e1233297a9dc9bc66fd5afe7fb660d66a64eb6d492778070225107542f8c4b6c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -571,9 +571,9 @@ dependencies = [
 
 [[package]]
 name = "ree-types"
-version = "0.11.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fd954be1b5ba781582e73ccb5bcd0d32acb9bb71b1952e84a8fe1fb8d13e588"
+checksum = "885459b1fd423025fdef3a2a6fc4ca0afe3f96723e567bfddd06f70ea0adfe97"
 dependencies = [
  "anyhow",
  "bincode",
